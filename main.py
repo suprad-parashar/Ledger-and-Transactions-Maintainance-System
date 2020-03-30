@@ -2,7 +2,9 @@ from tkinter import *
 import webbrowser as web
 import people
 
-get_developer_URLs = lambda index: "https://www.linkedin.com/in/supradparashar/" if index == 1 else "https://www.linkedin.com/in/sandeep-n-s-6b3888165/"
+def open_developer_url(index):
+    get_developer_URLs = lambda index: "https://www.linkedin.com/in/supradparashar/" if index == 1 else "https://www.linkedin.com/in/sandeep-n-s-6b3888165/"
+    web.open(get_developer_URLs(index))
 
 def add_menu(window):
     menu = Menu(window)
@@ -17,8 +19,8 @@ def add_menu(window):
 
     # TODO: Fix opening of the urls at the start of the program. It should open only if the button is clicked.
     about_menu = Menu(help_menu)
-    about_menu.add_command(label = "Sandeep N S")#, command = web.open(get_developer_URLs(0)))
-    about_menu.add_command(label = "Suprad S Parashar")#, command = web.open(get_developer_URLs(1)))
+    about_menu.add_command(label = "Sandeep N S", command = lambda: open_developer_url(0))
+    about_menu.add_command(label = "Suprad S Parashar", command = lambda: open_developer_url(1))
 
     help_menu.add_cascade(label = "About", menu = about_menu)
 
