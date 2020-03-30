@@ -2,7 +2,7 @@ from tkinter import *
 # Pickle module is used to read and write objects into a file in binary mode.
 # import pickle
 
-class Person:
+class Person :
     def __init__(self, name, email, phone, address, gender, dob):
         self.name = name
         self.email = email
@@ -24,8 +24,10 @@ def get_frame(window):
 
     return frame
 
+
 def writeName(text):
     print(text)
+
 
 def add_person():
     person_sub_window = Tk()
