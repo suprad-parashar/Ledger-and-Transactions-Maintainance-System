@@ -1,9 +1,11 @@
 from tkinter import *
 import tkinter.messagebox as dialog
-import re as regex
+import tkinter.ttk as table
 import hashlib as Hash
 import pickle
+import validate
 
+# A Person class to store the deatils of a person.
 class Person:
     def __init__(self, identification_hash, name, email, phone, address, gender, dob):
         self.id = identification_hash
@@ -14,53 +16,46 @@ class Person:
         self.gender = gender
         self.dob = dob
 
+# This method takes in the main window of the program as a parameter and generates and returns the frame of the Person Module.
 def get_frame(window):
     frame = Frame(window)
 
+    # Table to display the people.
+    people_table = table.Treeview(frame)
+    people_table.grid(row = 0, column = 0, columnspan = 3)
+    people_table["columns"] = ["name", "email", "phone"]
+    people_table["show"] = "headings"
+    people_table.heading("name", text = "Name")
+    people_table.heading("email", text = "Email Address")
+    people_table.heading("phone", text = "Phone Number")
+
+    try:
+        with open("files/people.ltms", "rb") as file:
+            index = 0
+            while True:
+                person = pickle.load(file)
+                people_table.insert("", index, values = (person.name, person.email, person.phone))
+                index += 1
+    except EOFError:
+        pass
+    except FileNotFoundError:
+        with open("files/people.ltms", "wb") as file:
+            pass
+
+    # Buttons to add, modify and delete a person.
     add_button = Button(frame, text = "Add Person", command = add_person)
     edit_button = Button(frame, text = "Edit Person")
     delete_button = Button(frame, text = "Delete Person")
 
-    add_button.grid(row = 0, column = 0)
-    edit_button.grid(row = 0, column = 1)
-    delete_button.grid(row = 0, column = 2)
+    add_button.grid(row = 1, column = 0)
+    edit_button.grid(row = 1, column = 1)
+    delete_button.grid(row = 1, column = 2)
 
     return frame
 
-isEmailValid = lambda email: regex.search('^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$', email)
-
-def isDateValid(date):
-    isLeapYear = lambda year: (year % 4 == 0 and year % 100 != 0) or year % 400 == 0
-    try:
-        dates = list(map(int, date.split("/")))
-        if dates[1] == 2:
-            if isLeapYear(dates[2]) and dates[0] in range(1, 30):
-                return True
-            elif (not isLeapYear) and dates[0] in range(1, 29):
-                return True
-            else:
-                return False
-        elif dates[1] in [1, 3, 5, 7, 8, 10, 12] and dates[0] in range(1, 32):
-            return True
-        elif dates[1] not in [1, 3, 5, 7, 8, 10, 12] and dates[0] in range(1, 31):
-            return True
-        else:
-            return False
-    except:
-        return False
-
-def isPhoneValid(phone):
-    if phone[0] not in [6, 7, 8, 9]:
-        return False
-    elif len(phone) != 10:
-        return False
-    else:
-        for c in phone:
-            if not c.isdigit():
-                return False
-        return True
-
+# This method is used to add a person.
 def add_person():
+    # This method saves the person to the file.
     def save_person():
         person_name = name_input.get()
         person_email = email_input.get()
@@ -70,19 +65,20 @@ def add_person():
         person_dob = dob_input.get()
         if person_name == "":
             dialog.showerror("Invalid Input", "Name cannot be empty.")
-        elif not isEmailValid(person_email):
+        elif not validate.isEmailValid(person_email):
             dialog.showerror("Invalid Input", "Invalid Email.")
-        elif isPhoneValid(person_phone):
+        elif not validate.isPhoneValid(person_phone):
             dialog.showerror("Invalid Input", "Invalid Phone Number.")
-        elif not isDateValid(person_dob):
+        elif not validate.isDateValid(person_dob):
             dialog.showerror("Invalid Input", "Invalid Date of Birth.")
         else:
             person_id = Hash.md5((person_name + person_email).encode()).hexdigest()
-            with open("people.ltms", "ab") as file:
-                with open("index.txt", "a") as index:
+            with open("files/people.ltms", "ab") as file:
+                with open("files/index.txt", "a") as index:
                     index.write(person_id + " " + str(file.tell()) + "\n")
                 person = Person(person_id, person_name, person_email, person_phone, person_address, person_gender, person_dob)
                 pickle.dump(person, file)
+            person_sub_window.destroy()
 
     person_sub_window = Tk()
     person_sub_window.title("Add Person")
