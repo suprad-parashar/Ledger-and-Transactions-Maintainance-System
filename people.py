@@ -31,13 +31,18 @@ def get_frame(window):
 
     try:
         with open("files/people.ltms", "rb") as file:
+            people = []
+            try:
+                while True:
+                    person = pickle.load(file)
+                    people.append(person)
+            except EOFError:
+                pass
+            people.sort(key = lambda person: person.name)
             index = 0
-            while True:
-                person = pickle.load(file)
+            for person in people:
                 people_table.insert("", index, values = (person.name, person.email, person.phone))
                 index += 1
-    except EOFError:
-        pass
     except FileNotFoundError:
         with open("files/people.ltms", "wb") as file:
             pass
@@ -79,6 +84,8 @@ def add_person():
                 person = Person(person_id, person_name, person_email, person_phone, person_address, person_gender, person_dob)
                 pickle.dump(person, file)
             person_sub_window.destroy()
+
+        # TODO: The main window should refresh once a person is saved.
 
     person_sub_window = Tk()
     person_sub_window.title("Add Person")
