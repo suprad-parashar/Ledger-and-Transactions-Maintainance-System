@@ -1,6 +1,7 @@
 from tkinter import *
 import webbrowser as web
 import people
+import transaction
 
 get_developer_URLs = lambda index: "https://www.linkedin.com/in/supradparashar/" if index == 1 else "https://www.linkedin.com/in/sandeep-n-s-6b3888165/"
 
@@ -28,6 +29,6 @@ def add_menu(window):
 window = Tk()
 window.title("Ledger and Transactions Maintainance System")
 add_menu(window)
-frame = people.get_frame(window)
+frame = transaction.get_frame(window)
 frame.pack()
 window.mainloop()
