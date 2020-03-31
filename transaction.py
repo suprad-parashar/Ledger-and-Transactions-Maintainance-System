@@ -118,6 +118,7 @@ def add_transaction():
     sname = Label(top_frame, text="Sender Name", textvariable=entry_var)
     sname.grid(row=0, column=0)
     sname_var = StringVar(top_frame)
+    # TODO: The Display the list of Names to choose from.
     #Taking Input from File for List of People added by User.
     try:
         with open("files/people.ltms", "rb") as f:
