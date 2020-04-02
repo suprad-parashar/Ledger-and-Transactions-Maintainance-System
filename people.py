@@ -6,6 +6,8 @@ import pickle
 import os
 import helper
 
+# TODO: Fix bug. Quit has to be pressed multiple times to work.
+
 # A Person class to store the deatils of a person.
 class Person:
     def __init__(self, identification_hash, name, email, phone, address, gender, dob):
@@ -39,10 +41,10 @@ class Person:
         for data in self.get_data():
             details_table.insert("", index, values = data)
             index += 1
-        details_table.pack()
+        details_table.grid(row = 0, column = 0, columnspan = 2)
         return frame
 
-def refresh_table(frame, people_table):
+def refresh_table(people_table):
     for entry in people_table.get_children():
         people_table.delete(entry)
     with open("files/people.ltms", "rb") as file:
@@ -96,17 +98,17 @@ def get_frame(window):
             index += 1
 
     # Buttons to add, modify and delete a person.
-    add_button = Button(frame, text = "Add Person", command = lambda: add_person(frame, people_table))
-    edit_button = Button(frame, text = "View Details", command = lambda: view_person(people_table.item(people_table.selection()[0])))
-    delete_button = Button(frame, text = "Delete", command = lambda: delete_person(people_table.item(people_table.selection()[0]), frame, people_table))
+    add_button = Button(frame, text = "Add Person", command = lambda: add_person(people_table))
+    view_button = Button(frame, text = "View Details", command = lambda: view_person(people_table.item(people_table.selection()[0]), people_table))
+    delete_button = Button(frame, text = "Delete", command = lambda: delete_person(people_table.item(people_table.selection()[0]), people_table))
 
     add_button.grid(row = 1, column = 0)
-    edit_button.grid(row = 1, column = 1)
+    view_button.grid(row = 1, column = 1)
     delete_button.grid(row = 1, column = 2)
 
     return frame
 
-def view_person(item):
+def view_person(item, people_table):
     person_id = item["tags"][0]
     with open("files/people.ltms", "rb") as file:
         while True:
@@ -118,11 +120,15 @@ def view_person(item):
         transactions_frame.grid(row = 0, column = 0, columnspan = 2)
         person_frame = person.get_data_frame(person_details_window)
         person_frame.grid(row = 0, column = 2)
+        edit_button = Button(person_frame, text = "Edit", command = lambda: add_person(people_table, person))
+        edit_button.grid(row = 1, column = 0)
+        close_button = Button(person_frame, text = "Close", command = person_details_window.destroy)
+        close_button.grid(row = 1, column = 1)
         person_details_window.mainloop()
         
 
 # This method deletes the selected item from the people table.
-def delete_person(item, frame, people_table):
+def delete_person(item, people_table):
     delete_id = item["tags"][0]
     delete_index = 0
     index = 0
@@ -149,18 +155,22 @@ def delete_person(item, frame, people_table):
                 pickle.dump(people[i], people_file)
                 index_file.write(" ".join(indices[i]) + "\n")
         dialog.showinfo("Deletion Successful", "The person named {} has been deleted from the record.".format(deleted_person.name))
-        refresh_table(frame, people_table)
+        refresh_table(people_table)
 
 # This method is used to add a person.
-def add_person(frame, people_table):
+def add_person(people_table, edit_person = None):
     # This method saves the person to the file.
-    def save_person():
+    def save_person(edit):
         person_name = name_input.get()
         person_email = email_input.get()
         person_phone = phone_input.get()    
         person_address = address_input.get("1.0", "end-1c")
         person_gender = gender_int.get()
         person_dob = dob_input.get()
+
+        person_id = Hash.md5((person_name + person_email).lower().encode()).hexdigest()
+        person = Person(person_id, person_name, person_email, person_phone, person_address, person_gender, person_dob)
+
         if person_name == "":
             dialog.showerror("Invalid Input", "Name cannot be empty.")
         elif not helper.isEmailValid(person_email):
@@ -169,8 +179,24 @@ def add_person(frame, people_table):
             dialog.showerror("Invalid Input", "Invalid Phone Number.")
         elif not helper.isDateValid(person_dob):
             dialog.showerror("Invalid Input", "Invalid Date of Birth.")
+        elif edit:
+            people = []
+            with open("files/people.ltms", "rb") as people_file:
+                try:
+                    while True:
+                        temp_person = pickle.load(people_file)
+                        if temp_person.id == edit_person.id:
+                            temp_person = person
+                        people.append(temp_person)
+                except EOFError:
+                    pass
+            with open("files/people.ltms", "wb") as people_file, open("files/index.txt", "w") as index_file:
+                for temp in people:
+                    index_file.write(temp.id + " " + str(people_file.tell()) + "\n")
+                    pickle.dump(temp, people_file)  
+            person_sub_window.destroy()
+            refresh_table(people_table)
         else:
-            person_id = Hash.md5((person_name + person_email).lower().encode()).hexdigest()
             alreadyExists = False
             with open("files/index.txt", "r") as file:
                 for line in file:
@@ -181,10 +207,9 @@ def add_person(frame, people_table):
                 with open("files/people.ltms", "ab") as file:
                     with open("files/index.txt", "a") as index:
                         index.write(person_id + " " + str(file.tell()) + "\n")
-                    person = Person(person_id, person_name, person_email, person_phone, person_address, person_gender, person_dob)
                     pickle.dump(person, file)
-            person_sub_window.destroy()
-            refresh_table(frame, people_table)
+                    person_sub_window.destroy()
+                    refresh_table(people_table)
 
     person_sub_window = Tk()
     person_sub_window.title("Add Person")
@@ -192,7 +217,7 @@ def add_person(frame, people_table):
     bottom_frame = Frame(person_sub_window)
     bottom_frame.pack(side = BOTTOM)
 
-    save_button = Button(bottom_frame, text = "Save", command = save_person)
+    save_button = Button(bottom_frame, text = "Save", command = lambda: save_person(edit_person is not None))
     cancel_button = Button(bottom_frame, text = "Cancel", command = person_sub_window.destroy)
     cancel_button.pack(side = RIGHT)
     save_button.pack(side = RIGHT)
@@ -203,21 +228,25 @@ def add_person(frame, people_table):
     name = Label(top_frame, text = "Name")
     name.grid(row = 0, column = 0)
     name_input = Entry(top_frame)
+    name_input.insert(END, "" if edit_person is None else edit_person.name)
     name_input.grid(row = 0, column = 1)
 
     email = Label(top_frame, text = "Email")
     email.grid(row = 1, column = 0)
     email_input = Entry(top_frame)
+    email_input.insert(END, "" if edit_person is None else edit_person.email)
     email_input.grid(row = 1, column = 1)
 
     phone = Label(top_frame, text = "Phone")
     phone.grid(row = 2, column = 0)
     phone_input = Entry(top_frame)
+    phone_input.insert(END, "" if edit_person is None else edit_person.phone)
     phone_input.grid(row = 2, column = 1)
 
     address = Label(top_frame, text = "Address")
     address.grid(row = 3, column = 0)
     address_input = Text(top_frame, width = 50, height = 4)
+    address_input.insert(END, "" if edit_person is None else edit_person.address)
     address_input.grid(row = 3, column = 1)
 
     gender = Label(top_frame, text = "Gender")
@@ -228,6 +257,16 @@ def add_person(frame, people_table):
     male_radio = Radiobutton(gender_frame, text = "Male", value = 0, variable = gender_int)
     female_radio = Radiobutton(gender_frame, text = "Female", value = 1, variable = gender_int)
     other_radio = Radiobutton(gender_frame, text = "Other", value = 2, variable = gender_int)
+
+    gender_value = 0 if edit_person is None else edit_person.gender
+
+    if gender_value == 0:
+        male_radio.select()
+    elif gender_value == 1:
+        female_radio.select()
+    else:
+        other_radio.select()
+
     male_radio.pack(side = LEFT)
     female_radio.pack(side = LEFT)
     other_radio.pack(side = LEFT)
@@ -236,6 +275,7 @@ def add_person(frame, people_table):
     dob = Label(top_frame, text = "Date of Birth (DD/MM/YYYY)")
     dob.grid(row = 5, column = 0)
     dob_input = Entry(top_frame)
+    dob_input.insert(END, "" if edit_person is None else edit_person.dob)
     dob_input.grid(row = 5, column = 1)
     
     person_sub_window.mainloop()
