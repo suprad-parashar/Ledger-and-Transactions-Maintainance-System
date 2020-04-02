@@ -1,4 +1,5 @@
 import re as regex
+
 # A lambda function to check if the email address passed is valid or not.
 isEmailValid = lambda email: True if email == "" else regex.search('^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$', email)
 
