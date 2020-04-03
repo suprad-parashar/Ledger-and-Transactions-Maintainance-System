@@ -5,11 +5,14 @@ import people
 import dashboard
 import transaction
 
+# TODO: When people and transactions buttons are click, both frames show up. Fix it.
 
 def change_frame(frame, name, prev = "None"):
     global window, people_button, transactions_button
     frame.destroy()
     if name == "Dashboard":
+        frame = dashboard.get_frame(window)
+        frame.pack(side = TOP)
         if prev == "People":
             people_button.config(text = "People", command = lambda: change_frame(frame, "People"))
         if prev == "Transaction":
@@ -21,7 +24,7 @@ def change_frame(frame, name, prev = "None"):
         frame.pack(side = TOP)
 
     elif name == "Transaction":
-        transactions_button.config(text="DashBoard",command = lambda :change_frame(frame,"Dashboard","Transaction"))
+        transactions_button.config(text="Dashboard",command = lambda :change_frame(frame,"Dashboard","Transaction"))
         frame = transaction.get_frame(window)
         frame.pack(side = TOP)
 
