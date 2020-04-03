@@ -19,29 +19,19 @@ class Transaction:
         else:
             self.trans_type = "Credit"
 
-    def get_data(self):
-        return [
-            ("Sender Name", self.sender_name),
-            ("Amount", self.amount),
-            ("Transaction Type", "Debit" if self.trans_type == 0 else "Credit"),
-            ("Description", self.description),
-            ("Date of Transaction", self.trans_date)
-        ]
-
     def get_table_data(self):
         return self.sender_name, self.amount, self.trans_type, self.description, self.trans_date
 
-    def get_data_frame(self, window):
-        frame = Frame(window, borderwidth=2, relief="raised")
-        details_table = table.Treeview(frame)
-        details_table["columns"] = ["parameter", "value"]
-        details_table["show"] = "headings"
-        index = 0
-        for data in self.get_data():
-            details_table.insert("", index, values=data)
-            index += 1
-        details_table.grid(row=0, column=0, columnspan=2)
-        return frame
+def get_person_transactions(person):
+    with open("files/transaction.ltms", "rb") as file:
+        transactions = []
+        try:
+            while True:
+                transaction = pickle.load(file)
+                if transaction.sender_name == person.name:
+                    transactions.append(transaction)
+        except:
+            return transactions
 
 
 # Gets Data from People file.
@@ -49,7 +39,6 @@ def get_people_list():
     people_names = []
     try:
         with open("files/people.ltms", "rb") as f:
-
             try:
                 while True:
                     person = pickle.load(f)

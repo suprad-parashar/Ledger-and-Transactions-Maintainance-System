@@ -5,12 +5,14 @@ import hashlib as Hash
 import pickle
 import os
 import helper
+import transaction
 
 
 # TODO: Fix bug. Quit has to be pressed multiple times to work.
 
 # A Person class to store the deatils of a person.
 class Person:
+    # The constructor of the class.
     def __init__(self, identification_hash, name, email, phone, address, gender, dob):
         self.id = identification_hash
         self.name = name
@@ -20,6 +22,7 @@ class Person:
         self.gender = gender
         self.dob = dob
 
+    # Returns the Data of the person.
     def get_data(self):
         return [
             ("Name", self.name),
@@ -123,6 +126,21 @@ def view_person(item, people_table):
                 break
         person_details_window = Tk()
         transactions_frame = Frame(person_details_window)
+
+        trans_table = table.Treeview(transactions_frame)
+        trans_table.grid(row = 0, column = 0, columnspan = 6)
+        trans_table["columns"] = ["name", "amount", "type", "des", "dot"]
+        trans_table["show"] = "headings"
+        trans_table.heading("name", text = "Name")
+        trans_table.heading("amount", text = "Amount")
+        trans_table.heading("type", text = "Type")
+        trans_table.heading("dot", text = "Date Of Transaction")
+        trans_table.heading("des", text = "Description")
+        index = 0
+        for trans in transaction.get_person_transactions(person):
+            trans_table.insert("", index, values=(trans.sender_name, trans.amount, trans.trans_type, trans.description, trans.trans_date))
+            index += 1
+
         transactions_frame.grid(row=0, column=0, columnspan=2)
         person_frame = person.get_data_frame(person_details_window)
         person_frame.grid(row=0, column=2)
