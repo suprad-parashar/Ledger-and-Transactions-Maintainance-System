@@ -3,6 +3,8 @@ import tkinter.ttk as table
 import webbrowser as web
 import people
 import dashboard
+import transaction
+
 
 def change_frame(frame, name, prev = "None"):
     global window, people_button, transactions_button
@@ -10,10 +12,19 @@ def change_frame(frame, name, prev = "None"):
     if name == "Dashboard":
         if prev == "People":
             people_button.config(text = "People", command = lambda: change_frame(frame, "People"))
+        if prev == "Transaction":
+            transactions_button.config(text = "Transaction", command = lambda: change_frame(frame,"Transaction"))
+
     elif name == "People":
         people_button.config(text = "Dashboard", command = lambda: change_frame(frame, "Dashboard", "People"))
         frame = people.get_frame(window)
         frame.pack(side = TOP)
+
+    elif name == "Transaction":
+        transactions_button.config(text="DashBoard",command = lambda :change_frame(frame,"Dashboard","Transaction"))
+        frame = transaction.get_frame(window)
+        frame.pack(side = TOP)
+
 
 # This method adds the menu to the program.
 def add_menu(window):
@@ -36,8 +47,8 @@ def add_menu(window):
     menu.add_cascade(label = "File", menu = files_menu)
     menu.add_cascade(label = "Help", menu = help_menu)
 
-# Main Logic of the function
 
+# Main Logic of the function
 window = Tk()
 window.title("Ledger and Transactions Maintainance System")
 add_menu(window)
@@ -45,7 +56,7 @@ frame = dashboard.get_frame(window)
 frame.pack(side = TOP)
 navigation_frame = Frame(window)
 people_button = Button(navigation_frame, text = "People", command = lambda: change_frame(frame, "People"))
-transactions_button = Button(navigation_frame, text = "Transactions")
+transactions_button = Button(navigation_frame, text = "Transactions",command = lambda :change_frame(frame,"Transaction"))
 quit_button = Button(navigation_frame, text = "Quit", command = window.quit)
 people_button.pack(side = LEFT)
 transactions_button.pack(side = LEFT)
