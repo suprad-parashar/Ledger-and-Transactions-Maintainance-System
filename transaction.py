@@ -23,13 +23,13 @@ class Transaction:
         return [
             ("Sender Name", self.sender_name),
             ("Amount", self.amount),
-            ("Description", self.description),
             ("Transaction Type", "Debit" if self.trans_type == 0 else "Credit"),
+            ("Description", self.description),
             ("Date of Transaction", self.trans_date)
         ]
 
     def get_table_data(self):
-        return (self.sender_name, self.amount, self.trans_date, self.description, self.trans_type)
+        return self.sender_name, self.amount, self.trans_type, self.description, self.trans_date
 
     def get_data_frame(self, window):
         frame = Frame(window, borderwidth=2, relief="raised")
@@ -75,7 +75,8 @@ def refresh_table(trans_table):
                 trans.append(transaction)
         except EOFError:
             pass
-        trans.sort(key=lambda trans: trans.trans_date)
+        trans.sort(key=lambda trans: trans.trans_date, reverse=True)
+        print(trans)
         index = 0
         for transaction in trans:
             trans_table.insert("", index, values=transaction.get_table_data(), tags=transaction.trans_id)
@@ -96,13 +97,14 @@ def get_frame(window):
 
     trans_table = table.Treeview(frame)
     trans_table.grid(row=0, column=0, columnspan=6)
-    trans_table["columns"] = ["name", "amount", "dot", "des", "type"]
+    trans_table["columns"] = ["name", "amount", "type", "des", "dot" ]
     trans_table["show"] = "headings"
     trans_table.heading("name", text="Name")
     trans_table.heading("amount", text="Amount")
+    trans_table.heading("type", text="Type")
     trans_table.heading("dot", text="Date Of Transaction")
     trans_table.heading("des", text="Description")
-    trans_table.heading("type", text="Type")
+
 
     try:
         with open("files/transaction.ltms", "rb") as file:
@@ -114,11 +116,11 @@ def get_frame(window):
             except EOFError:
                 pass
 
-            trans.sort(key=lambda person: a_trans.trans_date)
+            trans.sort(key=lambda a_trans:a_trans.trans_date,reverse=True)
             index = 0
             for a_trans in trans:
                 trans_table.insert("", index, values=(
-                a_trans.sender_name, a_trans.amount, a_trans.trans_date, a_trans.description, a_trans.trans_type),
+                a_trans.sender_name, a_trans.amount, a_trans.trans_type, a_trans.description, a_trans.trans_date),
                                    tags=a_trans.trans_id)
                 index += 1
     except FileNotFoundError:
@@ -129,11 +131,10 @@ def get_frame(window):
     delete_button = Button(frame, text="Delete Transaction",
                            command=lambda: delete_transaction(trans_table.item(trans_table.selection()[0]),
                                                               trans_table))
-    view_button = Button(frame, text="View Transaction",
-                         command=lambda: view_transaction(trans_table.item(trans_table.selection()[0])))
+
     add_button.grid(row=1, column=0, columnspan=2)
-    delete_button.grid(row=1, column=2, columnspan=2)
-    view_button.grid(row=1, column=4, columnspan=2)
+    delete_button.grid(row=1, column=1, columnspan=2)
+
     return frame
 
 
@@ -141,6 +142,7 @@ def writename(text):
     print(text)
 
 
+#TODO: Give option to user whether to enable or diabl this option
 def delete_transaction(item, trans_table):
     print(item)
     delete_id = item["tags"][0]
@@ -175,55 +177,38 @@ def delete_transaction(item, trans_table):
                             deleted_transaction.sender_name, deleted_transaction.trans_date))
         refresh_table(trans_table)
 
-
-def view_transaction(item):
-    person_id = item["tags"][0]
-    with open("files/transaction.ltms", "rb") as file:
-        while True:
-            person = pickle.load(file)
-            if person.trans_id == person_id:
-                break
-        trans_details_window = Tk()
-        transactions_frame = Frame(trans_details_window)
-        transactions_frame.grid(row=0, column=0, columnspan=2)
-        trans_frame = person.get_data_frame(trans_details_window)
-        trans_frame.grid(row=0, column=2)
-        close_button = Button(trans_frame, text="Close", command=trans_details_window.destroy)
-        close_button.grid(row=1, column=0,columnspan=2)
-        trans_details_window.mainloop()
-
-
 def add_transaction(trans_table):
     # Saving Transactions into File
     def save_transaction():
-            sender_name = sname_var.get()
-            amount = amount_input.get()
-            des = des_input.get()
-            trans_type = typeOfTrans.get()
-            now = datetime.now()
-            dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-            trans_date_and_time = dt_string
+        sender_name = sname_var.get()
+        amount = amount_input.get()
+        des = des_input.get()
+        trans_type = typeOfTrans.get()
+        now = datetime.now()
+        dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+        trans_date_and_time = dt_string
 
-            trans_id = Hash.md5((sender_name + amount).encode()).hexdigest()
-            trans = Transaction(trans_id, sender_name, des, amount, trans_date_and_time, trans_type)
+        trans_id = Hash.md5((sender_name + amount).encode()).hexdigest()
+        trans = Transaction(trans_id, sender_name, des, amount, trans_date_and_time, trans_type)
 
-            #Verifying entered Amount
-            if amount == "0" or amount == "" or not amount.isdigit():
-                dialog.showerror("Invalid Input", "Enter Some Amount")
-            else:
-                #Asking for Confirmation
-                r = dialog.askquestion("Delete Transaction",
-                                       "Do you want to add this Transaction to record?", icon='warning')
-                if r == "yes":
-                    with open("files/transaction.ltms", "ab") as file:
-                        with open("files/index_transaction.txt", "a") as index:
-                            index.write(trans_id + " " + str(file.tell()) + "\n")
-                        pickle.dump(trans, file)
-                        refresh_table(trans_table)
-                        trans_sub_window.destroy()
-
-                else:
+        #Verifying entered Amount
+        if amount == "0" or amount == "" or not amount.isdigit():
+            dialog.showerror("Invalid Input", "Enter Some Amount")
+        else:
+            #Asking for Confirmation
+            r = dialog.askquestion("Delete Transaction",
+                                   "Do you want to add this Transaction to record?", icon='warning')
+            if r == "yes":
+                with open("files/transaction.ltms", "ab") as file:
+                    with open("files/index_transaction.txt", "a") as index:
+                        index.write(trans_id + " " + str(file.tell()) + "\n")
+                    pickle.dump(trans, file)
+                    refresh_table(trans_table)
                     trans_sub_window.destroy()
+
+            else:
+                trans_sub_window.destroy()
+        refresh_table(trans_table)
 
     # Transaction Window
     trans_sub_window = Tk()
@@ -261,12 +246,13 @@ def add_transaction(trans_table):
     amount_input = Entry(top_frame)
     amount_input.grid(row=1, column=1)
 
-    typeOfTrans = IntVar()
     trans_type = Label(top_frame, text="Transaction Type")
     trans_type.grid(row=4, column=0)
     trans_type_frame = Frame(top_frame)
-    debit_radio = Radiobutton(trans_type_frame, text="Debit", value=0, variable=typeOfTrans, state=ACTIVE)
-    credit_radio = Radiobutton(trans_type_frame, text="Credit", value=1, variable=typeOfTrans, state=ACTIVE)
+    typeOfTrans = IntVar(trans_type_frame)
+    typeOfTrans.set(0)
+    debit_radio = Radiobutton(trans_type_frame, text="Debit", value=0, variable=typeOfTrans)
+    credit_radio = Radiobutton(trans_type_frame, text="Credit", value=1, variable=typeOfTrans)
     debit_radio.pack(side=LEFT)
     credit_radio.pack(side=LEFT)
     trans_type_frame.grid(row=4, column=1)
