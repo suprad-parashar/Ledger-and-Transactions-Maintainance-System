@@ -21,15 +21,16 @@ class Transaction:
         return self.person_name, self.amount, self.trans_type, self.description, self.trans_date
 
 def get_person_transactions(person):
+    transactions = []
     with open("files/transaction.ltms", "rb") as file:
-        transactions = []
         try:
             while True:
                 transaction = pickle.load(file)
-                if transaction.person_phone == person_phone:
+                if transaction.person_phone == person.phone:
                     transactions.append(transaction)
-        except:
-            return transactions
+        except EOFError:
+            pass
+    return transactions
 
 def get_last_transactions(n = 5):
     transactions = []
@@ -149,6 +150,7 @@ def delete_transaction(item, trans_table):
         dialog.showinfo("Deletion Successful",
                         "The Transaction with person named {} on {} has been deleted from the record.".format(
                             deleted_transaction.person_name, deleted_transaction.trans_date))
+        people.change_balance(deleted_transaction.person_phone, int(deleted_transaction.amount) if deleted_transaction.trans_type == "Credit" else -int(deleted_transaction.amount))
         refresh_table(trans_table)
 
 # Adds a transaction to file.

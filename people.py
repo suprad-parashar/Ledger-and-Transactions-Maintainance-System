@@ -5,6 +5,7 @@ import tkinter.ttk as table
 import hashlib as Hash
 import pickle
 import os
+from datetime import datetime
 import helper
 import transaction
 
@@ -49,7 +50,7 @@ class Person:
         for data in self.get_data():
             details_table.insert("", index, values=data)
             index += 1
-        details_table.grid(row=0, column=0, columnspan=2)
+        details_table.grid(row=0, column=0, columnspan=3)
         return frame
 
 # Refreshes the table to reflect changes.
@@ -147,27 +148,42 @@ def view_person(item, people_table, direct = False):
     transactions_frame = Frame(person_details_window)
 
     trans_table = table.Treeview(transactions_frame)
-    trans_table.grid(row = 0, column = 0, columnspan = 6)
-    trans_table["columns"] = ["name", "amount", "type", "des", "dot"]
+    trans_table.grid(row = 0, column = 0, columnspan = 4)
+    trans_table["columns"] = ["dot", "amount", "type", "des"]
     trans_table["show"] = "headings"
-    trans_table.heading("name", text = "Name")
     trans_table.heading("amount", text = "Amount")
     trans_table.heading("type", text = "Type")
     trans_table.heading("dot", text = "Date Of Transaction")
     trans_table.heading("des", text = "Description")
     index = 0
     for trans in transaction.get_person_transactions(person):
-        trans_table.insert("", index, values=(trans.sender_name, trans.amount, trans.trans_type, trans.description, trans.trans_date))
+        trans_table.insert("", index, values=(trans.trans_date, trans.amount, trans.trans_type, trans.description))
         index += 1
-
     transactions_frame.grid(row=0, column=0, columnspan=2)
     person_frame = person.get_data_frame(person_details_window)
-    person_frame.grid(row=0, column=2)
+    person_frame.grid(row=0, column=2, columnspan = 2)
     edit_button = Button(person_frame, text="Edit", command=lambda: add_person(people_table, person))
     edit_button.grid(row=1, column=0)
+    clear_balance_button = Button(person_frame, text="Clear Balance", command=lambda: clear_balance(person, trans_table))
+    clear_balance_button.grid(row=1, column=1)
     close_button = Button(person_frame, text="Close", command=person_details_window.destroy)
-    close_button.grid(row=1, column=1)
+    close_button.grid(row=1, column=2)
     person_details_window.mainloop()
+
+def clear_balance(person, trans_table):
+    result = dialog.askquestion("Clear Balance", "Do you want to clear the balance of ₹{} of {}?".format(abs(person.balance), person.name),
+                                icon='warning')
+    if result == 'yes':
+        now = datetime.now()
+        dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+        trans_id = Hash.md5((person.phone + str(-person.balance) + dt_string).encode()).hexdigest()
+        trans = transaction.Transaction(trans_id, person.name, person.phone, "Clear Balance", abs(person.balance), dt_string, "Debit" if person.balance < 0 else "Credit")
+        with open("files/transaction.ltms", "ab") as file:
+            with open("files/index_transaction.txt", "a") as index:
+                index.write(trans_id + " " + str(file.tell()) + "\n")
+            pickle.dump(trans, file)
+        change_balance(person.phone, -person.balance)
+        trans_table.destroy()
 
 # This method deletes the selected item from the people table.
 def delete_person(item, people_table):
