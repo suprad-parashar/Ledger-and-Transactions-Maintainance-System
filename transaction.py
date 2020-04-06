@@ -5,52 +5,44 @@ import hashlib as Hash
 import pickle
 from datetime import datetime
 import tkinter.messagebox as dialog
-
+import people
 
 class Transaction:
-    def __init__(self, trans_id, sender_name, des, amount, trans_date, trans_type):
+    def __init__(self, trans_id, person_name, person_phone, des, amount, trans_date, trans_type):
         self.trans_id = trans_id
-        self.sender_name = sender_name
+        self.person_name = person_name
+        self.person_phone = person_phone
         self.description = des
         self.amount = amount
         self.trans_date = trans_date
-        if trans_type == 0:
-            self.trans_type = "Debit"
-        else:
-            self.trans_type = "Credit"
+        self.trans_type = "Debit" if trans_type == 0 else "Credit"
 
     def get_table_data(self):
-        return self.sender_name, self.amount, self.trans_type, self.description, self.trans_date
+        return self.person_name, self.amount, self.trans_type, self.description, self.trans_date
 
 def get_person_transactions(person):
+    transactions = []
     with open("files/transaction.ltms", "rb") as file:
-        transactions = []
         try:
             while True:
                 transaction = pickle.load(file)
-                if transaction.sender_name == person.name:
+                if transaction.person_phone == person.phone:
                     transactions.append(transaction)
-        except:
-            return transactions
-
-
-# Gets Data from People file.
-def get_people_list():
-    people_names = []
-    try:
-        with open("files/people.ltms", "rb") as f:
-            try:
-                while True:
-                    person = pickle.load(f)
-                    people_names.append(person)
-            except EOFError:
-                pass
-            people_names.sort(key=lambda person: person.name)
-    except FileNotFoundError:
-        with open("files/people.ltms", "wb") as _:
+        except EOFError:
             pass
-    return people_names
+    return transactions
 
+def get_last_transactions(n = 5):
+    transactions = []
+    try:
+        with open("files/transaction.ltms", "rb") as file:
+            for _ in range(n):
+                transactions.append(pickle.load(file))
+        return sorted(transactions, key = lambda x: x.trans_date, reverse = True)
+    except EOFError:
+        return sorted(transactions, key = lambda x: x.trans_date, reverse = True)
+    except:
+        return []
 
 # Reloads the Table Contents
 def refresh_table(trans_table):
@@ -109,7 +101,7 @@ def get_frame(window):
             index = 0
             for a_trans in trans:
                 trans_table.insert("", index, values=(
-                a_trans.sender_name, a_trans.amount, a_trans.trans_type, a_trans.description, a_trans.trans_date),
+                a_trans.person_name, a_trans.amount, a_trans.trans_type, a_trans.description, a_trans.trans_date),
                                    tags=a_trans.trans_id)
                 index += 1
     except FileNotFoundError:
@@ -126,14 +118,8 @@ def get_frame(window):
 
     return frame
 
-
-def writename(text):
-    print(text)
-
-
 #TODO: Give option to user whether to enable or diabl this option
 def delete_transaction(item, trans_table):
-    print(item)
     delete_id = item["tags"][0]
     delete_index = 0
     index = 0
@@ -155,7 +141,7 @@ def delete_transaction(item, trans_table):
     indices.pop(delete_index)
     result = dialog.askquestion("Delete Transaction",
                                 "Do you want to delete the Transaction with {} from History?".format(
-                                    deleted_transaction.sender_name), icon='warning')
+                                    deleted_transaction.person_name), icon='warning')
     if result == 'yes':
         with open("files/transaction.ltms", "wb") as trans_file, open("files/index_transaction.txt", "w") as index_file:
             for i in range(len(trans)):
@@ -163,13 +149,17 @@ def delete_transaction(item, trans_table):
                 index_file.write(" ".join(indices[i]) + "\n")
         dialog.showinfo("Deletion Successful",
                         "The Transaction with person named {} on {} has been deleted from the record.".format(
-                            deleted_transaction.sender_name, deleted_transaction.trans_date))
+                            deleted_transaction.person_name, deleted_transaction.trans_date))
+        people.change_balance(deleted_transaction.person_phone, int(deleted_transaction.amount) if deleted_transaction.trans_type == "Credit" else -int(deleted_transaction.amount))
         refresh_table(trans_table)
 
+# Adds a transaction to file.
 def add_transaction(trans_table):
     # Saving Transactions into File
     def save_transaction():
-        sender_name = sname_var.get()
+        print(people_choices.item(people_choices.selection()[0]))
+        sender_name = people_choices.item(people_choices.selection()[0])['values'][0]
+        sender_phone = str(people_choices.item(people_choices.selection()[0])['values'][1])
         amount = amount_input.get()
         des = des_input.get()
         trans_type = typeOfTrans.get()
@@ -177,17 +167,19 @@ def add_transaction(trans_table):
         dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
         trans_date_and_time = dt_string
 
-        trans_id = Hash.md5((sender_name + amount).encode()).hexdigest()
-        trans = Transaction(trans_id, sender_name, des, amount, trans_date_and_time, trans_type)
+        trans_id = Hash.md5((sender_phone + amount + dt_string).encode()).hexdigest()
+        trans = Transaction(trans_id, sender_name, sender_phone, des, amount, trans_date_and_time, trans_type)
 
         #Verifying entered Amount
         if amount == "0" or amount == "" or not amount.isdigit():
             dialog.showerror("Invalid Input", "Enter Some Amount")
         else:
             #Asking for Confirmation
-            r = dialog.askquestion("Delete Transaction",
+            r = dialog.askquestion("Insert Transaction",
                                    "Do you want to add this Transaction to record?", icon='warning')
             if r == "yes":
+                amount = int(amount)
+                people.change_balance(sender_phone, -amount if trans_type == 1 else amount)
                 with open("files/transaction.ltms", "ab") as file:
                     with open("files/index_transaction.txt", "a") as index:
                         index.write(trans_id + " " + str(file.tell()) + "\n")
@@ -201,7 +193,6 @@ def add_transaction(trans_table):
 
     # Transaction Window
     trans_sub_window = Tk()
-    entry_var = StringVar()
     trans_sub_window.title("Add Transaction")
 
     bottom_frame = Frame(trans_sub_window)
@@ -217,18 +208,29 @@ def add_transaction(trans_table):
     top_frame.pack(side=TOP)
 
     # Adding The Labels And Input Fields (Entry)
-    sname = Label(top_frame, text="Sender Name", textvariable=entry_var)
+    sname = Label(top_frame, text="Sender Name")
     sname.grid(row=0, column=0)
-    sname_var = StringVar(top_frame)
+    # sname_var = StringVar(top_frame)
 
-    options = get_people_list()
-    names = []
-    for i in options:
-        names.append(i.name)
+    choices = people.get_people_list()
+    # # names = []
+    # # for i in options:
+    # #     names.append(i.name)
 
-    sname_var.set(names[0])
-    sname_input = table.Combobox(top_frame, width=17, textvariable=sname_var, values=names)
-    sname_input.grid(row=0, column=1)
+    people_choices = table.Treeview(top_frame)
+    people_choices.grid(row=0, column=0, columnspan=2)
+    people_choices["columns"] = ["name", "phone"]
+    people_choices["show"] = "headings"
+    people_choices.heading("name", text="Name")
+    people_choices.heading("phone", text="Phone")
+    index = 0
+    for person in choices:
+        people_choices.insert("", index, values=(person.name, person.phone))
+        index += 1
+
+    # sname_var.set(options[0])
+    # sname_input = table.Combobox(top_frame, width=17, textvariable=sname_var, values=options)
+    # sname_input.grid(row=0, column=1)
 
     amount = Label(top_frame, text="Amount (in Rs.)")
     amount.grid(row=1, column=0)
@@ -240,8 +242,8 @@ def add_transaction(trans_table):
     trans_type_frame = Frame(top_frame)
     typeOfTrans = IntVar(trans_type_frame)
     typeOfTrans.set(0)
-    debit_radio = Radiobutton(trans_type_frame, text="Debit", value=0, variable=typeOfTrans)
-    credit_radio = Radiobutton(trans_type_frame, text="Credit", value=1, variable=typeOfTrans)
+    debit_radio = Radiobutton(trans_type_frame, text="Give", value=0, variable=typeOfTrans)
+    credit_radio = Radiobutton(trans_type_frame, text="Receive", value=1, variable=typeOfTrans)
     debit_radio.pack(side=LEFT)
     credit_radio.pack(side=LEFT)
     trans_type_frame.grid(row=4, column=1)
