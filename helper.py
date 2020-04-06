@@ -29,13 +29,12 @@ def isDateValid(date):
 # A method to check if the passed phone number is valid or not.
 def isPhoneValid(phone):
     if phone == "":
-        return True
+        return False
     if phone[0] not in ['6', '7', '8', '9']:
         return False
     elif len(phone) != 10:
         return False
+    elif not phone.isdigit():
+        return False
     else:
-        for c in phone:
-            if not c.isdigit():
-                return False
         return True

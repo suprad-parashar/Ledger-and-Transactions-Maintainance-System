@@ -1,5 +1,6 @@
 from tkinter import *
 import tkinter.messagebox as dialog
+from tkinter.simpledialog import askstring
 import tkinter.ttk as table
 import hashlib as Hash
 import pickle
@@ -13,29 +14,32 @@ import transaction
 # A Person class to store the deatils of a person.
 class Person:
     # The constructor of the class.
-    def __init__(self, identification_hash, name, email, phone, address, gender, dob):
-        self.id = identification_hash
+    def __init__(self, name, email, phone, address, gender, dob, balance = 0):
         self.name = name
         self.email = email
         self.phone = phone
         self.address = address
         self.gender = gender
         self.dob = dob
+        self.balance = balance
 
     # Returns the Data of the person.
     def get_data(self):
         return [
             ("Name", self.name),
-            ("Email Address", self.email),
             ("Phone Number", self.phone),
+            ("Email Address", self.email),
+            ("Balance", "You have to {} ₹{}".format("give" if self.balance < 0 else "receive", abs(self.balance))),
             ("Address", self.address),
             ("Gender", "Male" if self.gender == 0 else "Female" if self.gender == 1 else "Other"),
             ("Date of Birth", self.dob)
         ]
 
+    # Returns a tuple having the name, phone and email of the person.
     def get_table_data(self):
-        return self.name, self.email, self.phone
+        return self.name, self.phone, self.email
 
+    # Retuns a frame containing the key-value pair of information of the person.
     def get_data_frame(self, window):
         frame = Frame(window, borderwidth=2, relief="raised")
         details_table = table.Treeview(frame)
@@ -48,7 +52,7 @@ class Person:
         details_table.grid(row=0, column=0, columnspan=2)
         return frame
 
-
+# Refreshes the table to reflect changes.
 def refresh_table(people_table):
     for entry in people_table.get_children():
         people_table.delete(entry)
@@ -63,9 +67,13 @@ def refresh_table(people_table):
         people.sort(key=lambda person: person.name)
         index = 0
         for person in people:
-            people_table.insert("", index, values=person.get_table_data(), tags=person.id)
+            people_table.insert("", index, values=person.get_table_data(), tags=person.phone)
             index += 1
 
+def search_person(people_table):
+    person_phone = askstring("Search", "Enter Phone Number")
+    if view_person(person_phone, people_table, True) == -1:
+        dialog.showerror("Not Found", "There exists no person with the phone number {}".format(person_phone))
 
 # This method takes in the main window of the program as a parameter and generates and returns the frame of the Person Module.
 def get_frame(window):
@@ -76,14 +84,15 @@ def get_frame(window):
         with open("files/people.ltms", "rb") as _, open("files/index.txt", "r") as _:
             pass
     except FileNotFoundError:
-        os.mkdir("files")
+        if not os.path.exists("files"):
+            os.mkdir("files")
         with open("files/people.ltms", "wb") as _, open("files/index.txt", "w") as _:
             pass
 
     # Table to display the people.
     people_table = table.Treeview(frame)
-    people_table.grid(row=0, column=0, columnspan=3)
-    people_table["columns"] = ["name", "email", "phone"]
+    people_table.grid(row=0, column=0, columnspan=4)
+    people_table["columns"] = ["name", "phone", "email"]
     people_table["show"] = "headings"
     people_table.heading("name", text="Name")
     people_table.heading("email", text="Email Address")
@@ -100,60 +109,69 @@ def get_frame(window):
         people.sort(key=lambda person: person.name)
         index = 0
         for person in people:
-            people_table.insert("", index, values=person.get_table_data(), tags=person.id)
+            people_table.insert("", index, values=person.get_table_data(), tags=person.phone)
             index += 1
 
     # Buttons to add, modify and delete a person.
     add_button = Button(frame, text="Add Person", command=lambda: add_person(people_table))
+    search_button = Button(frame, text = "Search by Phone", command = lambda: search_person(people_table))
     view_button = Button(frame, text="View Details",
                          command=lambda: view_person(people_table.item(people_table.selection()[0]), people_table))
     delete_button = Button(frame, text="Delete",
                            command=lambda: delete_person(people_table.item(people_table.selection()[0]), people_table))
 
     add_button.grid(row=1, column=0)
-    view_button.grid(row=1, column=1)
-    delete_button.grid(row=1, column=2)
+    search_button.grid(row = 1, column = 1)
+    view_button.grid(row=1, column = 2)
+    delete_button.grid(row=1, column = 3)
 
     return frame
 
-
-def view_person(item, people_table):
-    person_id = item["tags"][0]
-    with open("files/people.ltms", "rb") as file:
+# Opens a window displaying the information and the recent transactions of the person.
+def view_person(item, people_table, direct = False):
+    person_phone = str(item["tags"][0]) if not direct else item
+    with open("files/index.txt", "r") as file:
         while True:
-            person = pickle.load(file)
-            if person.id == person_id:
+            data = file.readline().split()
+            if data == []:
+                return -1
+            if data[0] == person_phone:
+                pos = int(data[1])
                 break
-        person_details_window = Tk()
-        transactions_frame = Frame(person_details_window)
+    
+    with open("files/people.ltms", "rb") as file:
+        file.seek(pos)
+        person = pickle.load(file)
 
-        trans_table = table.Treeview(transactions_frame)
-        trans_table.grid(row = 0, column = 0, columnspan = 6)
-        trans_table["columns"] = ["name", "amount", "type", "des", "dot"]
-        trans_table["show"] = "headings"
-        trans_table.heading("name", text = "Name")
-        trans_table.heading("amount", text = "Amount")
-        trans_table.heading("type", text = "Type")
-        trans_table.heading("dot", text = "Date Of Transaction")
-        trans_table.heading("des", text = "Description")
-        index = 0
-        for trans in transaction.get_person_transactions(person):
-            trans_table.insert("", index, values=(trans.sender_name, trans.amount, trans.trans_type, trans.description, trans.trans_date))
-            index += 1
+    person_details_window = Tk()
+    transactions_frame = Frame(person_details_window)
 
-        transactions_frame.grid(row=0, column=0, columnspan=2)
-        person_frame = person.get_data_frame(person_details_window)
-        person_frame.grid(row=0, column=2)
-        edit_button = Button(person_frame, text="Edit", command=lambda: add_person(people_table, person))
-        edit_button.grid(row=1, column=0)
-        close_button = Button(person_frame, text="Close", command=person_details_window.destroy)
-        close_button.grid(row=1, column=1)
-        person_details_window.mainloop()
+    trans_table = table.Treeview(transactions_frame)
+    trans_table.grid(row = 0, column = 0, columnspan = 6)
+    trans_table["columns"] = ["name", "amount", "type", "des", "dot"]
+    trans_table["show"] = "headings"
+    trans_table.heading("name", text = "Name")
+    trans_table.heading("amount", text = "Amount")
+    trans_table.heading("type", text = "Type")
+    trans_table.heading("dot", text = "Date Of Transaction")
+    trans_table.heading("des", text = "Description")
+    index = 0
+    for trans in transaction.get_person_transactions(person):
+        trans_table.insert("", index, values=(trans.sender_name, trans.amount, trans.trans_type, trans.description, trans.trans_date))
+        index += 1
 
+    transactions_frame.grid(row=0, column=0, columnspan=2)
+    person_frame = person.get_data_frame(person_details_window)
+    person_frame.grid(row=0, column=2)
+    edit_button = Button(person_frame, text="Edit", command=lambda: add_person(people_table, person))
+    edit_button.grid(row=1, column=0)
+    close_button = Button(person_frame, text="Close", command=person_details_window.destroy)
+    close_button.grid(row=1, column=1)
+    person_details_window.mainloop()
 
 # This method deletes the selected item from the people table.
 def delete_person(item, people_table):
-    delete_id = item["tags"][0]
+    delete_phone = item["tags"][0]
     delete_index = 0
     index = 0
     with open("files/people.ltms", "rb") as people_file, open("files/index.txt", "r") as index_file:
@@ -163,7 +181,7 @@ def delete_person(item, people_table):
             while True:
                 person = pickle.load(people_file)
                 entry = index_file.readline().split()
-                if person.id == delete_id:
+                if person.phone == delete_phone:
                     delete_index = index
                 people.append(person)
                 indices.append(entry)
@@ -183,6 +201,34 @@ def delete_person(item, people_table):
                         "The person named {} has been deleted from the record.".format(deleted_person.name))
         refresh_table(people_table)
 
+# Changes the balance of the person. TODO
+def change_balance(person_phone, amount):
+    people = []
+    with open("files/people.ltms", "rb") as people_file:
+        try:
+            while True:
+                person = pickle.load(people_file)
+                if person_phone == person.phone:
+                    person.balance += amount
+                people.append(person)
+        except EOFError:
+            pass
+    with open("files/people.ltms", "wb") as people_file:
+        for person in people:
+            pickle.dump(person, people_file)
+    
+# Returns the list of people.
+def get_people_list():
+    people_names = []
+    with open("files/people.ltms", "rb") as f:    
+        try:
+            while True:
+                person = pickle.load(f)
+                people_names.append(person)
+        except EOFError:
+            pass
+    people_names.sort(key=lambda person: person.name)
+    return people_names
 
 # This method is used to add a person.
 def add_person(people_table, edit_person=None):
@@ -195,15 +241,14 @@ def add_person(people_table, edit_person=None):
         person_gender = gender_int.get()
         person_dob = dob_input.get()
 
-        person_id = Hash.md5((person_name + person_email).lower().encode()).hexdigest()
-        person = Person(person_id, person_name, person_email, person_phone, person_address, person_gender, person_dob)
+        person = Person(person_name, person_email, person_phone, person_address, person_gender, person_dob)
 
         if person_name == "":
             dialog.showerror("Invalid Input", "Name cannot be empty.")
-        elif not helper.isEmailValid(person_email):
-            dialog.showerror("Invalid Input", "Invalid Email.")
         elif not helper.isPhoneValid(person_phone):
             dialog.showerror("Invalid Input", "Invalid Phone Number.")
+        elif not helper.isEmailValid(person_email):
+            dialog.showerror("Invalid Input", "Invalid Email.")
         elif not helper.isDateValid(person_dob):
             dialog.showerror("Invalid Input", "Invalid Date of Birth.")
         elif edit:
@@ -212,14 +257,14 @@ def add_person(people_table, edit_person=None):
                 try:
                     while True:
                         temp_person = pickle.load(people_file)
-                        if temp_person.id == edit_person.id:
+                        if temp_person.phone == edit_person.phone:
                             temp_person = person
                         people.append(temp_person)
                 except EOFError:
                     pass
             with open("files/people.ltms", "wb") as people_file, open("files/index.txt", "w") as index_file:
                 for temp in people:
-                    index_file.write(temp.id + " " + str(people_file.tell()) + "\n")
+                    index_file.write(temp.phone + " " + str(people_file.tell()) + "\n")
                     pickle.dump(temp, people_file)
             person_sub_window.destroy()
             refresh_table(people_table)
@@ -227,16 +272,16 @@ def add_person(people_table, edit_person=None):
             alreadyExists = False
             with open("files/index.txt", "r") as file:
                 for line in file:
-                    if line.split()[0] == person_id:
+                    if line.split()[0] == person_phone:
                         alreadyExists = True
                         dialog.showerror("Duplicate Entry", "Person already exists.")
             if not alreadyExists:
                 with open("files/people.ltms", "ab") as file:
                     with open("files/index.txt", "a") as index:
-                        index.write(person_id + " " + str(file.tell()) + "\n")
+                        index.write(person_phone + " " + str(file.tell()) + "\n")
                     pickle.dump(person, file)
-                    person_sub_window.destroy()
-                    refresh_table(people_table)
+            person_sub_window.destroy()
+            refresh_table(people_table)
 
     person_sub_window = Tk()
     person_sub_window.title("Add Person")
