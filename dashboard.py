@@ -33,8 +33,8 @@ def get_frame(window):
     trans_table.heading("dot", text = "Date Of Transaction")
     trans_table.heading("des", text = "Description")
     index = 0
-    for trans in transaction.get_last_transactions():
-        trans_table.insert("", index, values=(trans.person_name, trans.amount, trans.trans_type, trans.description, trans.trans_date))
+    for trans in transaction.TRANSACTIONS[:5]:
+        trans_table.insert("", index, values=(trans.person_name, trans.amount, trans.type, trans.description, trans.date))
         index += 1
     pay_money_card.grid(row = 1, column = 0, columnspan = 3, rowspan = 2)
     recieve_money_card.grid(row = 1, column = 3, columnspan = 3, rowspan = 2)

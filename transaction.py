@@ -6,75 +6,42 @@ import pickle
 from datetime import datetime
 import tkinter.messagebox as dialog
 import people
+import helper
+
+FILE_NAME = "files/transaction.ltms"
+INDEX_FILE_NAME = "files/transaction_index.txt"
 
 class Transaction:
-    def __init__(self, trans_id, person_name, person_phone, des, amount, trans_date, trans_type):
-        self.trans_id = trans_id
+    def __init__(self, trans_id, person_name, person_id, des, amount, trans_date, trans_type):
+        self.id = trans_id
         self.person_name = person_name
-        self.person_phone = person_phone
+        self.person_id = person_id
         self.description = des
         self.amount = amount
-        self.trans_date = trans_date
-        self.trans_type = "Debit" if trans_type == 0 else "Credit"
+        self.date = trans_date
+        self.type = "Debit" if trans_type == 0 else "Credit"
 
     def get_table_data(self):
-        return self.person_name, self.amount, self.trans_type, self.description, self.trans_date
+        return self.person_name, self.amount, self.type, self.description, self.date
 
 def get_person_transactions(person):
     transactions = []
-    with open("files/transaction.ltms", "rb") as file:
-        try:
-            while True:
-                transaction = pickle.load(file)
-                if transaction.person_phone == person.phone:
-                    transactions.append(transaction)
-        except EOFError:
-            pass
+    for trans in TRANSACTIONS:
+        if trans.person_id == person.id:
+            transactions.append(trans)
     return transactions
 
-def get_last_transactions(n = 5):
+def remove_person_transactions(person):
+    global TRANSACTIONS
     transactions = []
-    try:
-        with open("files/transaction.ltms", "rb") as file:
-            for _ in range(n):
-                transactions.append(pickle.load(file))
-        return sorted(transactions, key = lambda x: x.trans_date, reverse = True)
-    except EOFError:
-        return sorted(transactions, key = lambda x: x.trans_date, reverse = True)
-    except:
-        return []
-
-# Reloads the Table Contents
-def refresh_table(trans_table):
-    for entry in trans_table.get_children():
-        trans_table.delete(entry)
-    with open("files/transaction.ltms", "rb") as file:
-        trans = []
-        try:
-            while True:
-                transaction = pickle.load(file)
-                trans.append(transaction)
-        except EOFError:
-            pass
-        trans.sort(key=lambda trans: trans.trans_date, reverse=True)
-        print(trans)
-        index = 0
-        for transaction in trans:
-            trans_table.insert("", index, values=transaction.get_table_data(), tags=transaction.trans_id)
-            index += 1
-
+    for trans in TRANSACTIONS:
+        if trans.person_id != person.id:
+            transactions.append(trans)
+    TRANSACTIONS = transactions
+    helper.write_transactions(transactions, FILE_NAME)
 
 def get_frame(window):
     frame = Frame(window)
-
-    # Create files if it does not exists.
-    try:
-        with open("files/transaction.ltms", "rb") as _, open("files/index_transaction.txt", "r") as _:
-            pass
-    except FileNotFoundError:
-        os.mkdir("files")
-        with open("files/transaction.ltms", "wb") as _, open("files/index_transaction.txt", "w") as _:
-            pass
 
     trans_table = table.Treeview(frame)
     trans_table.grid(row=0, column=0, columnspan=6)
@@ -86,32 +53,10 @@ def get_frame(window):
     trans_table.heading("dot", text="Date Of Transaction")
     trans_table.heading("des", text="Description")
 
-
-    try:
-        with open("files/transaction.ltms", "rb") as file:
-            trans = []
-            try:
-                while True:
-                    a_trans = pickle.load(file)
-                    trans.append(a_trans)
-            except EOFError:
-                pass
-
-            trans.sort(key=lambda a_trans:a_trans.trans_date,reverse=True)
-            index = 0
-            for a_trans in trans:
-                trans_table.insert("", index, values=(
-                a_trans.person_name, a_trans.amount, a_trans.trans_type, a_trans.description, a_trans.trans_date),
-                                   tags=a_trans.trans_id)
-                index += 1
-    except FileNotFoundError:
-        with open("files/transaction.ltms", "wb") as _:
-            pass
+    helper.refresh_table(trans_table, TRANSACTIONS)
 
     add_button = Button(frame, text="Add Transaction", command=lambda: add_transaction(trans_table))
-    delete_button = Button(frame, text="Delete Transaction",
-                           command=lambda: delete_transaction(trans_table.item(trans_table.selection()[0]),
-                                                              trans_table))
+    delete_button = Button(frame, text="Delete Transaction", command=lambda: delete_transaction(trans_table.item(trans_table.selection()[0]), trans_table))
 
     add_button.grid(row=1, column=0, columnspan=2)
     delete_button.grid(row=1, column=1, columnspan=2)
@@ -122,74 +67,72 @@ def get_frame(window):
 def delete_transaction(item, trans_table):
     delete_id = item["tags"][0]
     delete_index = 0
-    index = 0
-    with open("files/transaction.ltms", "rb") as trans_file, open("files/index_transaction.txt", "r") as index_file:
-        trans = []
-        indices = []
-        try:
-            while True:
-                transaction = pickle.load(trans_file)
-                entry = index_file.readline().split()
-                if transaction.trans_id == delete_id:
-                    delete_index = index
-                trans.append(transaction)
-                indices.append(entry)
-                index += 1
-        except EOFError:
-            pass
-    deleted_transaction = trans.pop(delete_index)
-    indices.pop(delete_index)
-    result = dialog.askquestion("Delete Transaction",
-                                "Do you want to delete the Transaction with {} from History?".format(
-                                    deleted_transaction.person_name), icon='warning')
+    for i in range(len(TRANSACTIONS)):
+        if TRANSACTIONS[i].id == delete_id:
+            delete_index = i
+            break
+    deleted_transaction = TRANSACTIONS[delete_index]
+    result = dialog.askquestion("Delete Transaction", "Do you want to delete the Transaction with {} from History?".format(deleted_transaction.person_name), icon='warning')
     if result == 'yes':
-        with open("files/transaction.ltms", "wb") as trans_file, open("files/index_transaction.txt", "w") as index_file:
-            for i in range(len(trans)):
-                pickle.dump(trans[i], trans_file)
-                index_file.write(" ".join(indices[i]) + "\n")
-        dialog.showinfo("Deletion Successful",
-                        "The Transaction with person named {} on {} has been deleted from the record.".format(
-                            deleted_transaction.person_name, deleted_transaction.trans_date))
-        people.change_balance(deleted_transaction.person_phone, int(deleted_transaction.amount) if deleted_transaction.trans_type == "Credit" else -int(deleted_transaction.amount))
-        refresh_table(trans_table)
+        TRANSACTIONS.pop(delete_index)
+        helper.write_transactions(TRANSACTIONS, FILE_NAME)
+        dialog.showinfo("Deletion Successful", "The Transaction with person named {} on {} has been deleted from the record.".format(deleted_transaction.person_name, deleted_transaction.date))
+        people.change_balance(deleted_transaction.person_id, deleted_transaction.amount if deleted_transaction.type == "Credit" else -deleted_transaction.amount)
+        helper.refresh_table(trans_table, TRANSACTIONS)
+
+def update_transactions(old_id, new_id):
+    for trans in TRANSACTIONS:
+        if trans.person_id == old_id:
+            trans.person_id = new_id
+    helper.write_transactions(TRANSACTIONS, FILE_NAME)
 
 # Adds a transaction to file.
-def add_transaction(trans_table):
+def add_transaction(trans_table, insert_tran = None):
     # Saving Transactions into File
-    def save_transaction():
-        print(people_choices.item(people_choices.selection()[0]))
-        sender_name = people_choices.item(people_choices.selection()[0])['values'][0]
-        sender_phone = str(people_choices.item(people_choices.selection()[0])['values'][1])
-        amount = amount_input.get()
-        des = des_input.get()
-        trans_type = typeOfTrans.get()
-        now = datetime.now()
-        dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-        trans_date_and_time = dt_string
+    def save_transaction(insert_tran = None):
+        if insert_tran is None:
+            sender_name = people_choices.item(people_choices.selection()[0])['values'][0]
+            sender_id = str(people_choices.item(people_choices.selection()[0])['tags'][0])
+            amount = amount_input.get()
+            des = des_input.get()
+            trans_type = typeOfTrans.get()
+            now = datetime.now()
+            dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
 
-        trans_id = Hash.md5((sender_phone + amount + dt_string).encode()).hexdigest()
-        trans = Transaction(trans_id, sender_name, sender_phone, des, amount, trans_date_and_time, trans_type)
-
-        #Verifying entered Amount
-        if amount == "0" or amount == "" or not amount.isdigit():
-            dialog.showerror("Invalid Input", "Enter Some Amount")
-        else:
-            #Asking for Confirmation
-            r = dialog.askquestion("Insert Transaction",
-                                   "Do you want to add this Transaction to record?", icon='warning')
-            if r == "yes":
-                amount = int(amount)
-                people.change_balance(sender_phone, -amount if trans_type == 1 else amount)
-                with open("files/transaction.ltms", "ab") as file:
-                    with open("files/index_transaction.txt", "a") as index:
-                        index.write(trans_id + " " + str(file.tell()) + "\n")
-                    pickle.dump(trans, file)
-                    refresh_table(trans_table)
-                    trans_sub_window.destroy()
-
+            #Verifying entered Amount
+            if not helper.is_amount_valid(amount):
+                dialog.showerror("Invalid Input", "Enter Some Amount")
             else:
+                #Asking for Confirmation
+                r = dialog.askquestion("Insert Transaction",
+                                    "Do you want to add this Transaction to record?", icon='warning')
+                if r == "yes":
+                    amount = int(amount)
+                    trans_id = Hash.md5((sender_id + str(amount) + dt_string).encode()).hexdigest()
+                    trans = Transaction(trans_id, sender_name, sender_id, des, amount, dt_string, trans_type)
+                    people.change_balance(sender_id, -amount if trans_type == 1 else amount)
+                    with open(FILE_NAME, "ab") as file:
+                        with open(INDEX_FILE_NAME, "a") as index:
+                            index.write(trans_id + " " + str(file.tell()) + "\n")
+                        pickle.dump(trans, file)
+                    TRANSACTIONS.append(trans)
+                    TRANSACTIONS.sort(key = lambda a_trans: a_trans.date, reverse = True)
+                    helper.refresh_table(trans_table, TRANSACTIONS)
                 trans_sub_window.destroy()
-        refresh_table(trans_table)
+                helper.refresh_table(trans_table, TRANSACTIONS)
+        else:
+            people.change_balance(insert_tran.person_id, insert_tran.amount if insert_tran.type == "Credit" else -insert_tran.amount)
+            with open(FILE_NAME, "ab") as file:
+                with open(INDEX_FILE_NAME, "a") as index:
+                    index.write(insert_tran.id + " " + str(file.tell()) + "\n")
+                pickle.dump(insert_tran, file)
+            TRANSACTIONS.append(insert_tran)
+            TRANSACTIONS.sort(key = lambda a_trans: a_trans.date, reverse = True)
+            helper.refresh_table(trans_table, TRANSACTIONS)
+
+    if insert_tran is not None:
+        save_transaction(insert_tran)
+        return
 
     # Transaction Window
     trans_sub_window = Tk()
@@ -212,11 +155,6 @@ def add_transaction(trans_table):
     sname.grid(row=0, column=0)
     # sname_var = StringVar(top_frame)
 
-    choices = people.get_people_list()
-    # # names = []
-    # # for i in options:
-    # #     names.append(i.name)
-
     people_choices = table.Treeview(top_frame)
     people_choices.grid(row=0, column=0, columnspan=2)
     people_choices["columns"] = ["name", "phone"]
@@ -224,8 +162,8 @@ def add_transaction(trans_table):
     people_choices.heading("name", text="Name")
     people_choices.heading("phone", text="Phone")
     index = 0
-    for person in choices:
-        people_choices.insert("", index, values=(person.name, person.phone))
+    for person in people.PEOPLE:
+        people_choices.insert("", index, values=(person.name, person.phone), tags = person.id)
         index += 1
 
     # sname_var.set(options[0])
@@ -254,3 +192,5 @@ def add_transaction(trans_table):
     des_input.grid(row=5, column=1)
 
     trans_sub_window.mainloop()
+
+TRANSACTIONS = helper.read_transactions(FILE_NAME)
