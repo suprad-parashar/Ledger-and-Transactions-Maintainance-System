@@ -19,6 +19,8 @@ def change_frame(frame, name, prev="None"):
             people_button.config(text="People", command=lambda: change_frame(frame, "People"))
         if prev == "Transaction":
             transactions_button.config(text="Transaction", command=lambda: change_frame(frame, "Transaction"))
+        if prev == "Passbook":
+            passbook_button.config(text="Passbook", command=lambda: change_frame(frame, "Passbook"))
 
     elif name == "People":
         people_button.config(text="Dashboard", command=lambda: change_frame(frame, "Dashboard", "People"))
@@ -31,7 +33,7 @@ def change_frame(frame, name, prev="None"):
         frame.pack(side=TOP)
 
     elif name == "Passbook":
-        passbook_button.config(text="Passbook", command=lambda: change_frame(frame, "Passbook", "Passbook"))
+        passbook_button.config(text="Dashboard", command=lambda: change_frame(frame, "Dashboard", "Passbook"))
         frame = passbook.get_frame(window)
         frame.pack(side=TOP)
 
