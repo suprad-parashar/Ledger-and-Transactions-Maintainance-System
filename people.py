@@ -14,10 +14,10 @@ INDEX_FILE_NAME = "files/people_index.txt"
 
 # TODO: Fix bug. Quit has to be pressed multiple times to work.
 
-# A Person class to store the deatils of a person.
+# A Person class to store the details of a person.
 class Person:
     # The constructor of the class.
-    def __init__(self, person_id, name, email, phone, address, gender, dob, balance = 0):
+    def __init__(self, person_id, name, email, phone, address, gender, dob, balance=0):
         self.id = person_id
         self.name = name
         self.email = email
@@ -43,7 +43,7 @@ class Person:
     def get_table_data(self):
         return self.name, self.phone, self.email
 
-    # Retuns a frame containing the key-value pair of information of the person.
+    # Returns a frame containing the key-value pair of information of the person.
     def get_data_frame(self, window):
         frame = Frame(window, borderwidth=2, relief="raised")
         details_table = table.Treeview(frame)
@@ -56,14 +56,16 @@ class Person:
         details_table.grid(row=0, column=0, columnspan=3)
         return frame
 
+
 def get_total_balance_dashboard():
     give, get = 0, 0
     for person in PEOPLE:
-        if (balance := person.balance) < 0:
-            give += abs(balance)
+        if person.balance < 0:
+            give += abs(person.balance)
         else:
-            get += balance
+            get += person.balance
     return give, get
+
 
 def search_person(people_table):
     person_phone = askstring("Search", "Enter Phone Number")
@@ -72,6 +74,7 @@ def search_person(people_table):
         view_person(person_phone, people_table, True)
     else:
         dialog.showerror("Not Found", "There exists no person with the phone number {}".format(person_phone))
+
 
 # This method takes in the main window of the program as a parameter and generates and returns the frame of the Person Module.
 def get_frame(window):
@@ -90,21 +93,22 @@ def get_frame(window):
 
     # Buttons to add, modify and delete a person.
     add_button = Button(frame, text="Add Person", command=lambda: add_person(people_table))
-    search_button = Button(frame, text = "Search by Phone", command = lambda: search_person(people_table))
+    search_button = Button(frame, text="Search by Phone", command=lambda: search_person(people_table))
     view_button = Button(frame, text="View Details",
                          command=lambda: view_person(people_table.item(people_table.selection()[0]), people_table))
     delete_button = Button(frame, text="Delete",
                            command=lambda: delete_person(people_table.item(people_table.selection()[0]), people_table))
 
     add_button.grid(row=1, column=0)
-    search_button.grid(row = 1, column = 1)
-    view_button.grid(row=1, column = 2)
-    delete_button.grid(row=1, column = 3)
+    search_button.grid(row=1, column=1)
+    view_button.grid(row=1, column=2)
+    delete_button.grid(row=1, column=3)
 
     return frame
 
+
 # Opens a window displaying the information and the recent transactions of the person.
-def view_person(item, people_table, direct = False):
+def view_person(item, people_table, direct=False):
     person_id = str(item["tags"][0]) if not direct else item
     person = get_person(INDICES[person_id])
 
@@ -112,42 +116,49 @@ def view_person(item, people_table, direct = False):
     transactions_frame = Frame(person_details_window)
 
     trans_table = table.Treeview(transactions_frame)
-    trans_table.grid(row = 0, column = 0, columnspan = 4)
+    trans_table.grid(row=0, column=0, columnspan=4)
     trans_table["columns"] = ["dot", "amount", "type", "des"]
     trans_table["show"] = "headings"
-    trans_table.heading("amount", text = "Amount")
-    trans_table.heading("type", text = "Type")
-    trans_table.heading("dot", text = "Date Of Transaction")
-    trans_table.heading("des", text = "Description")
+    trans_table.heading("amount", text="Amount")
+    trans_table.heading("type", text="Type")
+    trans_table.heading("dot", text="Date Of Transaction")
+    trans_table.heading("des", text="Description")
     index = 0
     for trans in transaction.get_person_transactions(person):
         trans_table.insert("", index, values=(trans.date, trans.amount, trans.type, trans.description))
         index += 1
     transactions_frame.grid(row=0, column=0, columnspan=2)
     person_frame = person.get_data_frame(person_details_window)
-    person_frame.grid(row=0, column=2, columnspan = 2)
+    person_frame.grid(row=0, column=2, columnspan=2)
     edit_button = Button(person_frame, text="Edit", command=lambda: add_person(people_table, person))
     edit_button.grid(row=1, column=0)
-    clear_balance_button = Button(person_frame, text="Clear Balance", command=lambda: clear_balance(person, trans_table, person_details_window))
+    clear_balance_button = Button(person_frame, text="Clear Balance",
+                                  command=lambda: clear_balance(person, trans_table, person_details_window))
     clear_balance_button.grid(row=1, column=1)
     close_button = Button(person_frame, text="Close", command=person_details_window.destroy)
     close_button.grid(row=1, column=2)
     person_details_window.mainloop()
+
 
 def get_person(index):
     with open(FILE_NAME, "rb") as file:
         file.seek(index)
         return pickle.load(file)
 
+
 def clear_balance(person, trans_table, person_details_window):
-    result = dialog.askquestion("Clear Balance", "Do you want to clear the balance of ₹{} of {}?".format(abs(person.balance), person.name), icon='warning')
+    result = dialog.askquestion("Clear Balance",
+                                "Do you want to clear the balance of ₹{} of {}?".format(abs(person.balance),
+                                                                                        person.name), icon='warning')
     if result == 'yes':
         now = datetime.now()
         dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
         trans_id = Hash.md5((person.id + str(-person.balance) + dt_string).encode()).hexdigest()
-        trans = transaction.Transaction(trans_id, person.name, person.id, "Clear Balance", abs(person.balance), dt_string, "Debit" if person.balance < 0 else "Credit")
+        trans = transaction.Transaction(trans_id, person.name, person.id, "Clear Balance", abs(person.balance),
+                                        dt_string, "Debit" if person.balance < 0 else "Credit")
         transaction.add_transaction(trans_table, trans)
         person_details_window.destroy()
+
 
 # This method deletes the selected item from the people table.
 def delete_person(item, people_table):
@@ -163,24 +174,29 @@ def delete_person(item, people_table):
             delete_index = i
             break
     deleted_person = PEOPLE[delete_index]
-    result = dialog.askquestion("Delete Person", "Do you want to delete {} from contacts?".format(deleted_person.name), icon='warning')
+    result = dialog.askquestion("Delete Person", "Do you want to delete {} from contacts?".format(deleted_person.name),
+                                icon='warning')
     if result == 'yes':
         PEOPLE.pop(delete_index)
         INDICES = helper.write_people(PEOPLE, FILE_NAME, INDEX_FILE_NAME)
-        dialog.showinfo("Deletion Successful", "The person named {} has been deleted from the record.".format(deleted_person.name))
+        dialog.showinfo("Deletion Successful",
+                        "The person named {} has been deleted from the record.".format(deleted_person.name))
         helper.refresh_table(people_table, PEOPLE)
-        r = dialog.askquestion("Delete Transactions", "Do you want to delete the transactions related to {}".format(deleted_person.name), icon='warning')
+        r = dialog.askquestion("Delete Transactions",
+                               "Do you want to delete the transactions related to {}".format(deleted_person.name),
+                               icon='warning')
         if r == "yes":
             transaction.remove_person_transactions(deleted_person)
 
 
-# Changes the balance of the person. TODO
+# Changes the balance of the person.
 def change_balance(person_id, amount):
     global PEOPLE, INDICES
     for person in PEOPLE:
         if person.id == person_id:
             person.balance += amount
     INDICES = helper.write_people(PEOPLE, FILE_NAME, INDEX_FILE_NAME)
+
 
 # This method is used to add a person.
 def add_person(people_table, edit_person=None):
@@ -196,7 +212,8 @@ def add_person(people_table, edit_person=None):
         person_dob = dob_input.get()
         hash_string = (person_name + person_phone).encode
         person_id = Hash.md5(hash_string.encode()).hexdigest()
-        person = Person(person_id, person_name, person_email, person_phone, person_address, person_gender, person_dob, edit_person.balance if edit_person is not None else 0)
+        person = Person(person_id, person_name, person_email, person_phone, person_address, person_gender, person_dob,
+                        edit_person.balance if edit_person is not None else 0)
 
         if person_name == "":
             dialog.showerror("Invalid Input", "Name cannot be empty.")
@@ -218,7 +235,7 @@ def add_person(people_table, edit_person=None):
                         break
                 INDICES = helper.write_people(PEOPLE, FILE_NAME, INDEX_FILE_NAME)
                 transaction.update_transactions(edit_person.id, person.id)
-                PEOPLE.sort(key = lambda person: person.name)
+                PEOPLE.sort(key=lambda person: person.name)
                 person_sub_window.destroy()
                 helper.refresh_table(people_table, PEOPLE)
         else:
@@ -231,7 +248,7 @@ def add_person(people_table, edit_person=None):
                     pickle.dump(person, file)
                     PEOPLE.append(person)
                 INDICES = helper.write_people(PEOPLE, FILE_NAME, INDEX_FILE_NAME)
-                PEOPLE.sort(key = lambda person: person.name)
+                PEOPLE.sort(key=lambda person: person.name)
                 person_sub_window.destroy()
                 helper.refresh_table(people_table, PEOPLE)
 
@@ -303,5 +320,7 @@ def add_person(people_table, edit_person=None):
 
     person_sub_window.mainloop()
 
+
 INDICES = helper.load_indices(FILE_NAME, INDEX_FILE_NAME)
 PEOPLE = helper.read_people(FILE_NAME, INDEX_FILE_NAME)
+
