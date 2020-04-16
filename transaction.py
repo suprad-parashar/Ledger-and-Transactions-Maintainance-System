@@ -1,7 +1,6 @@
-import os
 from tkinter import *
 import tkinter.ttk as table
-import hashlib as Hash
+import hashlib as hash
 import pickle
 from datetime import datetime
 import tkinter.messagebox as dialog
@@ -11,8 +10,9 @@ import helper
 FILE_NAME = "files/transaction.ltms"
 INDEX_FILE_NAME = "files/transaction_index.txt"
 
+
 class Transaction:
-    def __init__(self, trans_id, person_name, person_id, des, amount, trans_date, trans_type,balance):
+    def __init__(self, trans_id, person_name, person_id, des, amount, trans_date, trans_type, balance):
         self.id = trans_id
         self.person_name = person_name
         self.person_id = person_id
@@ -22,11 +22,10 @@ class Transaction:
         self.type = "Debit" if trans_type == 0 else "Credit"
         self.balance = balance
 
-    def get_table_data(self,v=None):
+    def get_table_data(self, v=None):
         if v != None:
             return self.date, self.id, self.person_name, self.amount
         return self.person_name, self.amount, self.type, self.description, self.date
-
 
 
 def get_person_transactions(person):
@@ -73,7 +72,7 @@ def get_frame(window):
     return frame
 
 
-# TODO: Give option to user whether to enable or diabl this option
+# TODO: Give option to user whether to enable or disable this option
 def delete_transaction(item, trans_table):
     delete_id = item["tags"][0]
     delete_index = 0
@@ -125,7 +124,7 @@ def add_transaction(trans_table, insert_tran=None):
                                        "Do you want to add this Transaction to record?", icon='warning')
                 if r == "yes":
                     amount = int(amount)
-                    trans_id = Hash.md5((sender_id + str(amount) + dt_string).encode()).hexdigest()
+                    trans_id = hash.md5((sender_id + str(amount) + dt_string).encode()).hexdigest()
                     trans = Transaction(trans_id, sender_name, sender_id, des, amount, dt_string, trans_type)
                     people.change_balance(sender_id, -amount if trans_type == 1 else amount)
                     with open(FILE_NAME, "ab") as file:
@@ -138,7 +137,8 @@ def add_transaction(trans_table, insert_tran=None):
                 trans_sub_window.destroy()
                 helper.refresh_table(trans_table, TRANSACTIONS)
         else:
-            people.change_balance(insert_tran.person_id,insert_tran.amount if insert_tran.type == "Credit" else -insert_tran.amount)
+            people.change_balance(insert_tran.person_id,
+                                  insert_tran.amount if insert_tran.type == "Credit" else -insert_tran.amount)
             with open(FILE_NAME, "ab") as file:
                 with open(INDEX_FILE_NAME, "a") as index:
                     index.write(insert_tran.id + " " + str(file.tell()) + "\n")
