@@ -9,13 +9,16 @@ from datetime import datetime
 import helper
 import transaction
 
+FILE_NAME = "files/people.ltms"
+INDEX_FILE_NAME = "files/people_index.txt"
 
 # TODO: Fix bug. Quit has to be pressed multiple times to work.
 
-# A Person class to store the deatils of a person.
+# A Person class to store the details of a person.
 class Person:
     # The constructor of the class.
-    def __init__(self, name, email, phone, address, gender, dob, balance = 0):
+    def __init__(self, person_id, name, email, phone, address, gender, dob, balance=0):
+        self.id = person_id
         self.name = name
         self.email = email
         self.phone = phone
@@ -40,7 +43,7 @@ class Person:
     def get_table_data(self):
         return self.name, self.phone, self.email
 
-    # Retuns a frame containing the key-value pair of information of the person.
+    # Returns a frame containing the key-value pair of information of the person.
     def get_data_frame(self, window):
         frame = Frame(window, borderwidth=2, relief="raised")
         details_table = table.Treeview(frame)
@@ -53,42 +56,29 @@ class Person:
         details_table.grid(row=0, column=0, columnspan=3)
         return frame
 
-# Refreshes the table to reflect changes.
-def refresh_table(people_table):
-    for entry in people_table.get_children():
-        people_table.delete(entry)
-    with open("files/people.ltms", "rb") as file:
-        people = []
-        try:
-            while True:
-                person = pickle.load(file)
-                people.append(person)
-        except EOFError:
-            pass
-        people.sort(key=lambda person: person.name)
-        index = 0
-        for person in people:
-            people_table.insert("", index, values=person.get_table_data(), tags=person.phone)
-            index += 1
+
+def get_total_balance_dashboard():
+    give, get = 0, 0
+    for person in PEOPLE:
+        if person.balance < 0:
+            give += abs(person.balance)
+        else:
+            get += person.balance
+    return give, get
+
 
 def search_person(people_table):
     person_phone = askstring("Search", "Enter Phone Number")
-    if view_person(person_phone, people_table, True) == -1:
+    phones = [person.phone for person in PEOPLE]
+    if person_phone in phones:
+        view_person(person_phone, people_table, True)
+    else:
         dialog.showerror("Not Found", "There exists no person with the phone number {}".format(person_phone))
+
 
 # This method takes in the main window of the program as a parameter and generates and returns the frame of the Person Module.
 def get_frame(window):
     frame = Frame(window, name="people")
-
-    # Create files.
-    try:
-        with open("files/people.ltms", "rb") as _, open("files/index.txt", "r") as _:
-            pass
-    except FileNotFoundError:
-        if not os.path.exists("files"):
-            os.mkdir("files")
-        with open("files/people.ltms", "wb") as _, open("files/index.txt", "w") as _:
-            pass
 
     # Table to display the people.
     people_table = table.Treeview(frame)
@@ -99,165 +89,131 @@ def get_frame(window):
     people_table.heading("email", text="Email Address")
     people_table.heading("phone", text="Phone Number")
 
-    with open("files/people.ltms", "rb") as file:
-        people = []
-        try:
-            while True:
-                person = pickle.load(file)
-                people.append(person)
-        except EOFError:
-            pass
-        people.sort(key=lambda person: person.name)
-        index = 0
-        for person in people:
-            people_table.insert("", index, values=person.get_table_data(), tags=person.phone)
-            index += 1
+    helper.refresh_table(people_table, PEOPLE)
 
     # Buttons to add, modify and delete a person.
     add_button = Button(frame, text="Add Person", command=lambda: add_person(people_table))
-    search_button = Button(frame, text = "Search by Phone", command = lambda: search_person(people_table))
+    search_button = Button(frame, text="Search by Phone", command=lambda: search_person(people_table))
     view_button = Button(frame, text="View Details",
                          command=lambda: view_person(people_table.item(people_table.selection()[0]), people_table))
     delete_button = Button(frame, text="Delete",
                            command=lambda: delete_person(people_table.item(people_table.selection()[0]), people_table))
 
     add_button.grid(row=1, column=0)
-    search_button.grid(row = 1, column = 1)
-    view_button.grid(row=1, column = 2)
-    delete_button.grid(row=1, column = 3)
+    search_button.grid(row=1, column=1)
+    view_button.grid(row=1, column=2)
+    delete_button.grid(row=1, column=3)
 
     return frame
 
+
 # Opens a window displaying the information and the recent transactions of the person.
-def view_person(item, people_table, direct = False):
-    person_phone = str(item["tags"][0]) if not direct else item
-    with open("files/index.txt", "r") as file:
-        while True:
-            data = file.readline().split()
-            if data == []:
-                return -1
-            if data[0] == person_phone:
-                pos = int(data[1])
-                break
-    
-    with open("files/people.ltms", "rb") as file:
-        file.seek(pos)
-        person = pickle.load(file)
+def view_person(item, people_table, direct=False):
+    person_id = str(item["tags"][0]) if not direct else item
+    person = get_person(INDICES[person_id])
 
     person_details_window = Tk()
     transactions_frame = Frame(person_details_window)
 
     trans_table = table.Treeview(transactions_frame)
-    trans_table.grid(row = 0, column = 0, columnspan = 4)
+    trans_table.grid(row=0, column=0, columnspan=4)
     trans_table["columns"] = ["dot", "amount", "type", "des"]
     trans_table["show"] = "headings"
-    trans_table.heading("amount", text = "Amount")
-    trans_table.heading("type", text = "Type")
-    trans_table.heading("dot", text = "Date Of Transaction")
-    trans_table.heading("des", text = "Description")
+    trans_table.heading("amount", text="Amount")
+    trans_table.heading("type", text="Type")
+    trans_table.heading("dot", text="Date Of Transaction")
+    trans_table.heading("des", text="Description")
     index = 0
     for trans in transaction.get_person_transactions(person):
-        trans_table.insert("", index, values=(trans.trans_date, trans.amount, trans.trans_type, trans.description))
+        trans_table.insert("", index, values=(trans.date, trans.amount, trans.type, trans.description))
         index += 1
     transactions_frame.grid(row=0, column=0, columnspan=2)
     person_frame = person.get_data_frame(person_details_window)
-    person_frame.grid(row=0, column=2, columnspan = 2)
+    person_frame.grid(row=0, column=2, columnspan=2)
     edit_button = Button(person_frame, text="Edit", command=lambda: add_person(people_table, person))
     edit_button.grid(row=1, column=0)
-    clear_balance_button = Button(person_frame, text="Clear Balance", command=lambda: clear_balance(person, trans_table))
+    clear_balance_button = Button(person_frame, text="Clear Balance",
+                                  command=lambda: clear_balance(person, trans_table, person_details_window))
     clear_balance_button.grid(row=1, column=1)
     close_button = Button(person_frame, text="Close", command=person_details_window.destroy)
     close_button.grid(row=1, column=2)
     person_details_window.mainloop()
 
-def clear_balance(person, trans_table):
-    result = dialog.askquestion("Clear Balance", "Do you want to clear the balance of ₹{} of {}?".format(abs(person.balance), person.name),
-                                icon='warning')
+
+def get_person(index):
+    with open(FILE_NAME, "rb") as file:
+        file.seek(index)
+        return pickle.load(file)
+
+
+def clear_balance(person, trans_table, person_details_window):
+    result = dialog.askquestion("Clear Balance",
+                                "Do you want to clear the balance of ₹{} of {}?".format(abs(person.balance),
+                                                                                        person.name), icon='warning')
     if result == 'yes':
         now = datetime.now()
         dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-        trans_id = Hash.md5((person.phone + str(-person.balance) + dt_string).encode()).hexdigest()
-        trans = transaction.Transaction(trans_id, person.name, person.phone, "Clear Balance", abs(person.balance), dt_string, "Debit" if person.balance < 0 else "Credit")
-        with open("files/transaction.ltms", "ab") as file:
-            with open("files/index_transaction.txt", "a") as index:
-                index.write(trans_id + " " + str(file.tell()) + "\n")
-            pickle.dump(trans, file)
-        change_balance(person.phone, -person.balance)
-        trans_table.destroy()
+        trans_id = Hash.md5((person.id + str(-person.balance) + dt_string).encode()).hexdigest()
+        trans = transaction.Transaction(trans_id, person.name, person.id, "Clear Balance", abs(person.balance),
+                                        dt_string, "Debit" if person.balance < 0 else "Credit")
+        transaction.add_transaction(trans_table, trans)
+        person_details_window.destroy()
+
 
 # This method deletes the selected item from the people table.
 def delete_person(item, people_table):
-    delete_phone = item["tags"][0]
-    delete_index = 0
-    index = 0
-    with open("files/people.ltms", "rb") as people_file, open("files/index.txt", "r") as index_file:
-        people = []
-        indices = []
-        try:
-            while True:
-                person = pickle.load(people_file)
-                entry = index_file.readline().split()
-                if person.phone == delete_phone:
-                    delete_index = index
-                people.append(person)
-                indices.append(entry)
-                index += 1
-        except EOFError:
-            pass
-    deleted_person = people.pop(delete_index)
-    indices.pop(delete_index)
+    global PEOPLE, INDICES
+    delete_id = str(item["tags"][0])
+    print(delete_id)
+    print("-----------------------------------------------------")
+    delete_index = -1
+    for i in range(len(PEOPLE)):
+        print(type(PEOPLE[i].id), type(delete_id))
+        if PEOPLE[i].id == delete_id:
+            print()
+            delete_index = i
+            break
+    deleted_person = PEOPLE[delete_index]
     result = dialog.askquestion("Delete Person", "Do you want to delete {} from contacts?".format(deleted_person.name),
                                 icon='warning')
     if result == 'yes':
-        with open("files/people.ltms", "wb") as people_file, open("files/index.txt", "w") as index_file:
-            for i in range(len(people)):
-                pickle.dump(people[i], people_file)
-                index_file.write(" ".join(indices[i]) + "\n")
+        PEOPLE.pop(delete_index)
+        INDICES = helper.write_people(PEOPLE, FILE_NAME, INDEX_FILE_NAME)
         dialog.showinfo("Deletion Successful",
                         "The person named {} has been deleted from the record.".format(deleted_person.name))
-        refresh_table(people_table)
+        helper.refresh_table(people_table, PEOPLE)
+        r = dialog.askquestion("Delete Transactions",
+                               "Do you want to delete the transactions related to {}".format(deleted_person.name),
+                               icon='warning')
+        if r == "yes":
+            transaction.remove_person_transactions(deleted_person)
 
-# Changes the balance of the person. TODO
-def change_balance(person_phone, amount):
-    people = []
-    with open("files/people.ltms", "rb") as people_file:
-        try:
-            while True:
-                person = pickle.load(people_file)
-                if person_phone == person.phone:
-                    person.balance += amount
-                people.append(person)
-        except EOFError:
-            pass
-    with open("files/people.ltms", "wb") as people_file:
-        for person in people:
-            pickle.dump(person, people_file)
-    
-# Returns the list of people.
-def get_people_list():
-    people_names = []
-    with open("files/people.ltms", "rb") as f:    
-        try:
-            while True:
-                person = pickle.load(f)
-                people_names.append(person)
-        except EOFError:
-            pass
-    people_names.sort(key=lambda person: person.name)
-    return people_names
+
+# Changes the balance of the person.
+def change_balance(person_id, amount):
+    global PEOPLE, INDICES
+    for person in PEOPLE:
+        if person.id == person_id:
+            person.balance += amount
+    INDICES = helper.write_people(PEOPLE, FILE_NAME, INDEX_FILE_NAME)
+
 
 # This method is used to add a person.
 def add_person(people_table, edit_person=None):
     # This method saves the person to the file.
     def save_person(edit):
+        global INDICES, PEOPLE
+
         person_name = name_input.get()
         person_email = email_input.get()
         person_phone = phone_input.get()
         person_address = address_input.get("1.0", "end-1c")
         person_gender = gender_int.get()
         person_dob = dob_input.get()
-
-        person = Person(person_name, person_email, person_phone, person_address, person_gender, person_dob)
+        hash_string = (person_name + person_phone).encode
+        person_id = Hash.md5(hash_string.encode()).hexdigest()
+        person = Person(person_id, person_name, person_email, person_phone, person_address, person_gender, person_dob,
+                        edit_person.balance if edit_person is not None else 0)
 
         if person_name == "":
             dialog.showerror("Invalid Input", "Name cannot be empty.")
@@ -268,36 +224,33 @@ def add_person(people_table, edit_person=None):
         elif not helper.isDateValid(person_dob):
             dialog.showerror("Invalid Input", "Invalid Date of Birth.")
         elif edit:
-            people = []
-            with open("files/people.ltms", "rb") as people_file:
-                try:
-                    while True:
-                        temp_person = pickle.load(people_file)
-                        if temp_person.phone == edit_person.phone:
-                            temp_person = person
-                        people.append(temp_person)
-                except EOFError:
-                    pass
-            with open("files/people.ltms", "wb") as people_file, open("files/index.txt", "w") as index_file:
-                for temp in people:
-                    index_file.write(temp.phone + " " + str(people_file.tell()) + "\n")
-                    pickle.dump(temp, people_file)
-            person_sub_window.destroy()
-            refresh_table(people_table)
+            if edit_person.id != person_id and person_id in INDICES:
+                dialog.showerror("Duplicate Entry", "Person already exists.")
+                return
+            result = dialog.askquestion("Confirm Changes", "Do you want to save changes?", icon='warning')
+            if result == 'yes':
+                for i in range(len(PEOPLE)):
+                    if PEOPLE[i].id == edit_person.id:
+                        PEOPLE[i] = person
+                        break
+                INDICES = helper.write_people(PEOPLE, FILE_NAME, INDEX_FILE_NAME)
+                transaction.update_transactions(edit_person.id, person.id)
+                PEOPLE.sort(key=lambda person: person.name)
+                person_sub_window.destroy()
+                helper.refresh_table(people_table, PEOPLE)
         else:
-            alreadyExists = False
-            with open("files/index.txt", "r") as file:
-                for line in file:
-                    if line.split()[0] == person_phone:
-                        alreadyExists = True
-                        dialog.showerror("Duplicate Entry", "Person already exists.")
-            if not alreadyExists:
-                with open("files/people.ltms", "ab") as file:
-                    with open("files/index.txt", "a") as index:
-                        index.write(person_phone + " " + str(file.tell()) + "\n")
+            for person_id in INDICES.keys():
+                if person_id == person.id:
+                    dialog.showerror("Duplicate Entry", "Person already exists.")
+                    break
+            else:
+                with open(FILE_NAME, "ab") as file:
                     pickle.dump(person, file)
-            person_sub_window.destroy()
-            refresh_table(people_table)
+                    PEOPLE.append(person)
+                INDICES = helper.write_people(PEOPLE, FILE_NAME, INDEX_FILE_NAME)
+                PEOPLE.sort(key=lambda person: person.name)
+                person_sub_window.destroy()
+                helper.refresh_table(people_table, PEOPLE)
 
     person_sub_window = Tk()
     person_sub_window.title("Add Person")
@@ -347,7 +300,6 @@ def add_person(people_table, edit_person=None):
     other_radio = Radiobutton(gender_frame, text="Other", value=2, variable=gender_int)
 
     gender_value = 0 if edit_person is None else edit_person.gender
-
     if gender_value == 0:
         male_radio.select()
     elif gender_value == 1:
@@ -367,3 +319,8 @@ def add_person(people_table, edit_person=None):
     dob_input.grid(row=5, column=1)
 
     person_sub_window.mainloop()
+
+
+INDICES = helper.load_indices(FILE_NAME, INDEX_FILE_NAME)
+PEOPLE = helper.read_people(FILE_NAME, INDEX_FILE_NAME)
+
