@@ -67,7 +67,7 @@ def get_frame(window):
                                                               trans_table))
 
     add_button.grid(row=1, column=1, columnspan=2)
-    delete_button.grid(row=1, column=2, columnspan=2,sticky="E")
+    delete_button.grid(row=1, column=3, columnspan=2)
 
     return frame
 
