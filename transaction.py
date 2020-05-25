@@ -66,8 +66,8 @@ def get_frame(window):
                            command=lambda: delete_transaction(trans_table.item(trans_table.selection()[0]),
                                                               trans_table))
 
-    add_button.grid(row=1, column=0, columnspan=2)
-    delete_button.grid(row=1, column=1, columnspan=2)
+    add_button.grid(row=1, column=1, columnspan=2)
+    delete_button.grid(row=1, column=2, columnspan=2,sticky="E")
 
     return frame
 
