@@ -68,12 +68,14 @@ def get_total_balance_dashboard():
 def search_person(people_table):
     person_phone = askstring("Search", "Enter Phone Number")
     status = False
-    for people in PEOPLE:
-        if people.phone == person_phone:
-            view_person(people.id, people_table, True)
-            status = True
-    if not status:
-        dialog.showerror("Not Found", "There exists no person with the phone number {}".format(person_phone))
+    if person_phone != None:
+        for people in PEOPLE:
+            if people.phone == person_phone:
+                view_person(people.id, people_table, True)
+                status = True
+        if not status:
+            dialog.showerror("Not Found", "There exists no person with the phone number {}".format(person_phone))
+
 
 
 # This method takes in the main window of the program as a parameter and generates and returns the frame of the Person Module.
