@@ -126,7 +126,6 @@ def add_transaction(trans_table, insert_tran=None):
                     trans_id = hash.md5((sender_id + str(amount) + dt_string).encode()).hexdigest()
                     trans = Transaction(trans_id, sender_name, sender_id, des, amount, dt_string, trans_type,)
                     people.change_balance(sender_id, -amount if trans_type == 1 else amount)
-                    print()
                     with open(FILE_NAME, "ab") as file:
                         with open(INDEX_FILE_NAME, "a") as index:
                             index.write(trans_id + " " + str(file.tell()) + "\n")
@@ -203,6 +202,5 @@ def add_transaction(trans_table, insert_tran=None):
     des_input.grid(row=5, column=1)
 
     trans_sub_window.mainloop()
-
 
 TRANSACTIONS = helper.read_transactions(FILE_NAME)

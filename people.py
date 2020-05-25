@@ -156,10 +156,9 @@ def clear_balance(person, trans_table, person_details_window):
         if result == 'yes':
             now = datetime.now()
             dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-            print(person.balance)
             trans_id = hash.md5((person.id + str(-person.balance) + dt_string).encode()).hexdigest()
-            trans = transaction.Transaction(trans_id, person.name, person.id, "Clear Balance", person.balance,
-                                            dt_string, "Credit" if person.balance > 0 else "Debit")
+            trans = transaction.Transaction(trans_id, person.name, person.id, "Clear Balance", abs(person.balance),
+                                            dt_string, 1 if person.balance > 0 else 0)
             transaction.add_transaction(trans_table, trans)
             person_details_window.destroy()
 
@@ -199,6 +198,7 @@ def change_balance(person_id, amount):
     for person in PEOPLE:
         if person.id == person_id:
             person.balance += amount
+            print(person.balance)
             break
     INDICES = helper.write_people(PEOPLE, FILE_NAME, INDEX_FILE_NAME)
 
