@@ -6,7 +6,8 @@ import dashboard
 import transaction
 import passbook
 
-#TODO: Testing the switching between frames (change_frame meethod)
+
+# TODO: Testing the switching between frames (change_frame meethod)
 
 def change_frame(frame, name, prev="None"):
     global window, people_button, transactions_button, passbook_button
@@ -18,7 +19,7 @@ def change_frame(frame, name, prev="None"):
             people_button.config(text="People", command=lambda: change_frame(frame, "People", "Dashboard"))
             transactions_button.config(text="Transaction",
                                        command=lambda: change_frame(frame, "Transaction", "Dashboard"))
-            passbook_button.config(text="Passbook",command=lambda :change_frame(frame,"Passbook","Dashboard"))
+            passbook_button.config(text="Passbook", command=lambda: change_frame(frame, "Passbook", "Dashboard"))
             people_button.pack(side=LEFT)
             transactions_button.pack(side=LEFT)
             passbook_button.pack(side=LEFT)
@@ -27,7 +28,7 @@ def change_frame(frame, name, prev="None"):
         if prev == "Transaction":
             people_button.config(text="Dashboard", command=lambda: change_frame(frame, "Dashboard", "People"))
             transactions_button.config(text="Transaction", command=lambda: change_frame(frame, "Transaction", "People"))
-            passbook_button.config(text="Passbook",command=lambda :change_frame(frame,"Passbook","People"))
+            passbook_button.config(text="Passbook", command=lambda: change_frame(frame, "Passbook", "People"))
         if prev == "Passbook":
             people_button.config(text="Dashboard", command=lambda: change_frame(frame, "Dashboard", "People"))
             transactions_button.config(text="Transaction", command=lambda: change_frame(frame, "Transaction", "People"))
@@ -35,7 +36,7 @@ def change_frame(frame, name, prev="None"):
         if prev == "Dashboard":
             people_button.config(text="Dashboard", command=lambda: change_frame(frame, "Dashboard", "People"))
             transactions_button.config(command=lambda: change_frame(frame, "Transaction", "People"))
-            passbook_button.config(command=lambda :change_frame(frame,"Passbook","People"))
+            passbook_button.config(command=lambda: change_frame(frame, "Passbook", "People"))
 
         frame = people.get_frame(window)
         frame.pack(side=TOP)
@@ -45,7 +46,7 @@ def change_frame(frame, name, prev="None"):
             transactions_button.config(text="Dashboard",
                                        command=lambda: change_frame(frame, "Dashboard", "Transaction"))
             people_button.config(text="People", command=lambda: change_frame(frame, "People", "Transaction"))
-            passbook_button.config(text="Passbook", command=lambda :change_frame(frame,"Passbook", "Transaction"))
+            passbook_button.config(text="Passbook", command=lambda: change_frame(frame, "Passbook", "Transaction"))
         if prev == "Passbook":
             transactions_button.config(text="Dashboard",
                                        command=lambda: change_frame(frame, "Dashboard", "Transaction"))
@@ -55,23 +56,25 @@ def change_frame(frame, name, prev="None"):
             transactions_button.config(text="Dashboard",
                                        command=lambda: change_frame(frame, "Dashboard", "Transaction"))
             people_button.config(command=lambda: change_frame(frame, "People", "Transaction"))
-            passbook_button.config(command=lambda :change_frame(frame,"Passbook", "Transaction"))
+            passbook_button.config(command=lambda: change_frame(frame, "Passbook", "Transaction"))
         frame = transaction.get_frame(window)
         frame.pack(side=TOP)
 
     elif name == "Passbook":
         if prev == "People":
             passbook_button.config(text="Dashboard",
-                                       command=lambda: change_frame(frame, "Dashboard", "Passbook"))
-            transactions_button.config(text="Transaction",command=lambda :change_frame(frame,"Transaction","Passbook"))
+                                   command=lambda: change_frame(frame, "Dashboard", "Passbook"))
+            transactions_button.config(text="Transaction",
+                                       command=lambda: change_frame(frame, "Transaction", "Passbook"))
             people_button.config(text="People", command=lambda: change_frame(frame, "People", "Passbook"))
         if prev == "Transaction":
             passbook_button.config(text="Dashboard",
                                    command=lambda: change_frame(frame, "Dashboard", "Passbook"))
             people_button.config(text="People", command=lambda: change_frame(frame, "People", "Passbook"))
-            transactions_button.config(text="Transaction", command=lambda: change_frame(frame, "Transaction", "Passbook"))
+            transactions_button.config(text="Transaction",
+                                       command=lambda: change_frame(frame, "Transaction", "Passbook"))
         if prev == "Dashboard":
-            passbook_button.config(text="Dashboard",command=lambda:change_frame(frame,"Dashboard", "Passbook"))
+            passbook_button.config(text="Dashboard", command=lambda: change_frame(frame, "Dashboard", "Passbook"))
             transactions_button.config(command=lambda: change_frame(frame, "Transaction", "Passbook"))
             people_button.config(command=lambda: change_frame(frame, "People", "Passbook"))
         frame = passbook.get_frame(window)
@@ -86,8 +89,6 @@ def add_menu(window):
     files_menu = Menu(menu)
     help_menu = Menu(menu)
 
-    files_menu.add_command(label="Settings", command=print("#"))
-    files_menu.add_separator()
     files_menu.add_command(label="Exit", command=window.quit)
 
     about_menu = Menu(help_menu)
@@ -109,9 +110,11 @@ add_menu(window)
 frame = dashboard.get_frame(window)
 frame.pack(side=TOP)
 navigation_frame = Frame(window)
-people_button = Button(navigation_frame, text="People", command=lambda: change_frame(frame, "People","Dashboard"))
-transactions_button = Button(navigation_frame, text="Transactions", command=lambda: change_frame(frame, "Transaction", "Dashboard"))
-passbook_button = Button(navigation_frame, text="Passbook", command=lambda: change_frame(frame, "Passbook", "Dashboard"))
+people_button = Button(navigation_frame, text="People", command=lambda: change_frame(frame, "People", "Dashboard"))
+transactions_button = Button(navigation_frame, text="Transactions",
+                             command=lambda: change_frame(frame, "Transaction", "Dashboard"))
+passbook_button = Button(navigation_frame, text="Passbook",
+                         command=lambda: change_frame(frame, "Passbook", "Dashboard"))
 quit_button = Button(navigation_frame, text="Quit", command=window.quit)
 people_button.pack(side=LEFT)
 transactions_button.pack(side=LEFT)

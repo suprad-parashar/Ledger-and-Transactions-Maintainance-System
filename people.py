@@ -147,18 +147,21 @@ def get_person(index):
 
 
 def clear_balance(person, trans_table, person_details_window):
-    result = dialog.askquestion("Clear Balance",
+    if abs(person.balance) == 0:
+        dialog.showerror("Error","Balance is Already Zero")
+    else:
+        result = dialog.askquestion("Clear Balance",
                                 "Do you want to clear the balance of ₹{} of {}?".format(abs(person.balance),
                                                                                         person.name), icon='warning')
-    if result == 'yes':
-        now = datetime.now()
-        dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-        print(person.balance)
-        trans_id = hash.md5((person.id + str(-person.balance) + dt_string).encode()).hexdigest()
-        trans = transaction.Transaction(trans_id, person.name, person.id, "Clear Balance", abs(person.balance),
-                                        dt_string, "Debit" if person.balance < 0 else "Credit")
-        transaction.add_transaction(trans_table, trans)
-        person_details_window.destroy()
+        if result == 'yes':
+            now = datetime.now()
+            dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+            print(person.balance)
+            trans_id = hash.md5((person.id + str(-person.balance) + dt_string).encode()).hexdigest()
+            trans = transaction.Transaction(trans_id, person.name, person.id, "Clear Balance", person.balance,
+                                            dt_string, "Credit" if person.balance > 0 else "Debit")
+            transaction.add_transaction(trans_table, trans)
+            person_details_window.destroy()
 
 
 # This method deletes the selected item from the people table.
@@ -196,7 +199,7 @@ def change_balance(person_id, amount):
     for person in PEOPLE:
         if person.id == person_id:
             person.balance += amount
-
+            break
     INDICES = helper.write_people(PEOPLE, FILE_NAME, INDEX_FILE_NAME)
 
 

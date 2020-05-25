@@ -72,7 +72,6 @@ def get_frame(window):
     return frame
 
 
-# TODO: Give option to user whether to enable or disable this option
 def delete_transaction(item, trans_table):
     delete_id = item["tags"][0]
     delete_index = 0
@@ -91,7 +90,7 @@ def delete_transaction(item, trans_table):
                         "The Transaction with person named {} on {} has been deleted from the record.".format(
                             deleted_transaction.person_name, deleted_transaction.date))
         people.change_balance(deleted_transaction.person_id,
-                              deleted_transaction.amount if deleted_transaction.type == "Credit" else -deleted_transaction.amount)
+                              -deleted_transaction.amount if deleted_transaction.type == "Credit" else deleted_transaction.amount)
         helper.refresh_table(trans_table, TRANSACTIONS)
 
 
@@ -127,6 +126,7 @@ def add_transaction(trans_table, insert_tran=None):
                     trans_id = hash.md5((sender_id + str(amount) + dt_string).encode()).hexdigest()
                     trans = Transaction(trans_id, sender_name, sender_id, des, amount, dt_string, trans_type,)
                     people.change_balance(sender_id, -amount if trans_type == 1 else amount)
+                    print()
                     with open(FILE_NAME, "ab") as file:
                         with open(INDEX_FILE_NAME, "a") as index:
                             index.write(trans_id + " " + str(file.tell()) + "\n")
@@ -138,7 +138,7 @@ def add_transaction(trans_table, insert_tran=None):
                 helper.refresh_table(trans_table, TRANSACTIONS)
         else:
             people.change_balance(insert_tran.person_id,
-                                  insert_tran.amount if insert_tran.type == "Credit" else -insert_tran.amount)
+                                  insert_tran.amount if insert_tran.type == "Debit" else -insert_tran.amount)
             with open(FILE_NAME, "ab") as file:
                 with open(INDEX_FILE_NAME, "a") as index:
                     index.write(insert_tran.id + " " + str(file.tell()) + "\n")
