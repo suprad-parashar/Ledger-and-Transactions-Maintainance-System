@@ -12,7 +12,7 @@ INDEX_FILE_NAME = "files/transaction_index.txt"
 
 
 class Transaction:
-    def __init__(self, trans_id, person_name, person_id, des, amount, trans_date, trans_type, balance):
+    def __init__(self, trans_id, person_name, person_id, des, amount, trans_date, trans_type):
         self.id = trans_id
         self.person_name = person_name
         self.person_id = person_id
@@ -20,7 +20,7 @@ class Transaction:
         self.amount = amount
         self.date = trans_date
         self.type = "Debit" if trans_type == 0 else "Credit"
-        self.balance = balance
+
 
     def get_table_data(self, v=None):
         if v != None:
@@ -66,13 +66,12 @@ def get_frame(window):
                            command=lambda: delete_transaction(trans_table.item(trans_table.selection()[0]),
                                                               trans_table))
 
-    add_button.grid(row=1, column=0, columnspan=2)
-    delete_button.grid(row=1, column=1, columnspan=2)
+    add_button.grid(row=1, column=1, columnspan=2)
+    delete_button.grid(row=1, column=3, columnspan=2)
 
     return frame
 
 
-# TODO: Give option to user whether to enable or disable this option
 def delete_transaction(item, trans_table):
     delete_id = item["tags"][0]
     delete_index = 0
@@ -91,7 +90,7 @@ def delete_transaction(item, trans_table):
                         "The Transaction with person named {} on {} has been deleted from the record.".format(
                             deleted_transaction.person_name, deleted_transaction.date))
         people.change_balance(deleted_transaction.person_id,
-                              deleted_transaction.amount if deleted_transaction.type == "Credit" else -deleted_transaction.amount)
+                              -deleted_transaction.amount if deleted_transaction.type == "Credit" else deleted_transaction.amount)
         helper.refresh_table(trans_table, TRANSACTIONS)
 
 
@@ -125,7 +124,7 @@ def add_transaction(trans_table, insert_tran=None):
                 if r == "yes":
                     amount = int(amount)
                     trans_id = hash.md5((sender_id + str(amount) + dt_string).encode()).hexdigest()
-                    trans = Transaction(trans_id, sender_name, sender_id, des, amount, dt_string, trans_type)
+                    trans = Transaction(trans_id, sender_name, sender_id, des, amount, dt_string, trans_type,)
                     people.change_balance(sender_id, -amount if trans_type == 1 else amount)
                     with open(FILE_NAME, "ab") as file:
                         with open(INDEX_FILE_NAME, "a") as index:
@@ -138,7 +137,7 @@ def add_transaction(trans_table, insert_tran=None):
                 helper.refresh_table(trans_table, TRANSACTIONS)
         else:
             people.change_balance(insert_tran.person_id,
-                                  insert_tran.amount if insert_tran.type == "Credit" else -insert_tran.amount)
+                                  insert_tran.amount if insert_tran.type == "Debit" else -insert_tran.amount)
             with open(FILE_NAME, "ab") as file:
                 with open(INDEX_FILE_NAME, "a") as index:
                     index.write(insert_tran.id + " " + str(file.tell()) + "\n")
@@ -203,6 +202,5 @@ def add_transaction(trans_table, insert_tran=None):
     des_input.grid(row=5, column=1)
 
     trans_sub_window.mainloop()
-
 
 TRANSACTIONS = helper.read_transactions(FILE_NAME)

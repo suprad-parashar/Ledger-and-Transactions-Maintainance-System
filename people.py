@@ -2,9 +2,8 @@ from tkinter import *
 import tkinter.messagebox as dialog
 from tkinter.simpledialog import askstring
 import tkinter.ttk as table
-import hashlib as Hash
+import hashlib as hash
 import pickle
-import os
 from datetime import datetime
 import helper
 import transaction
@@ -12,7 +11,6 @@ import transaction
 FILE_NAME = "files/people.ltms"
 INDEX_FILE_NAME = "files/people_index.txt"
 
-# TODO: Fix bug. Quit has to be pressed multiple times to work.
 
 # A Person class to store the details of a person.
 class Person:
@@ -69,11 +67,15 @@ def get_total_balance_dashboard():
 
 def search_person(people_table):
     person_phone = askstring("Search", "Enter Phone Number")
-    phones = [person.phone for person in PEOPLE]
-    if person_phone in phones:
-        view_person(person_phone, people_table, True)
-    else:
-        dialog.showerror("Not Found", "There exists no person with the phone number {}".format(person_phone))
+    status = False
+    if person_phone != None:
+        for people in PEOPLE:
+            if people.phone == person_phone:
+                view_person(people.id, people_table, True)
+                status = True
+        if not status:
+            dialog.showerror("Not Found", "There exists no person with the phone number {}".format(person_phone))
+
 
 
 # This method takes in the main window of the program as a parameter and generates and returns the frame of the Person Module.
@@ -147,17 +149,20 @@ def get_person(index):
 
 
 def clear_balance(person, trans_table, person_details_window):
-    result = dialog.askquestion("Clear Balance",
+    if abs(person.balance) == 0:
+        dialog.showerror("Error","Balance is Already Zero")
+    else:
+        result = dialog.askquestion("Clear Balance",
                                 "Do you want to clear the balance of ₹{} of {}?".format(abs(person.balance),
                                                                                         person.name), icon='warning')
-    if result == 'yes':
-        now = datetime.now()
-        dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-        trans_id = Hash.md5((person.id + str(-person.balance) + dt_string).encode()).hexdigest()
-        trans = transaction.Transaction(trans_id, person.name, person.id, "Clear Balance", abs(person.balance),
-                                        dt_string, "Debit" if person.balance < 0 else "Credit")
-        transaction.add_transaction(trans_table, trans)
-        person_details_window.destroy()
+        if result == 'yes':
+            now = datetime.now()
+            dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+            trans_id = hash.md5((person.id + str(-person.balance) + dt_string).encode()).hexdigest()
+            trans = transaction.Transaction(trans_id, person.name, person.id, "Clear Balance", abs(person.balance),
+                                            dt_string, 1 if person.balance > 0 else 0)
+            transaction.add_transaction(trans_table, trans)
+            person_details_window.destroy()
 
 
 # This method deletes the selected item from the people table.
@@ -195,6 +200,8 @@ def change_balance(person_id, amount):
     for person in PEOPLE:
         if person.id == person_id:
             person.balance += amount
+            print(person.balance)
+            break
     INDICES = helper.write_people(PEOPLE, FILE_NAME, INDEX_FILE_NAME)
 
 
@@ -210,8 +217,9 @@ def add_person(people_table, edit_person=None):
         person_address = address_input.get("1.0", "end-1c")
         person_gender = gender_int.get()
         person_dob = dob_input.get()
-        hash_string = (person_name + person_phone).encode
-        person_id = Hash.md5(hash_string.encode()).hexdigest()
+        hash_string = (person_name + person_phone)
+        person_id = hash.md5(hash_string.encode()).hexdigest()
+
         person = Person(person_id, person_name, person_email, person_phone, person_address, person_gender, person_dob,
                         edit_person.balance if edit_person is not None else 0)
 
@@ -323,4 +331,3 @@ def add_person(people_table, edit_person=None):
 
 INDICES = helper.load_indices(FILE_NAME, INDEX_FILE_NAME)
 PEOPLE = helper.read_people(FILE_NAME, INDEX_FILE_NAME)
-

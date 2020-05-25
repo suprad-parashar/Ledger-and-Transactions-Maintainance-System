@@ -8,6 +8,7 @@ import helper
 
 pre_frame = 0
 
+
 def get_frame(window):
     frame = Frame(window, name="passbook")
 
@@ -44,12 +45,14 @@ def get_frame(window):
             n_entry.grid(row=1, column=2)
             pre_frame = 1
             ok_button.config(command=lambda: display(n=n_entry.get()))
-            ok_button.grid(row=2, column=2)
+            # ok_button.grid(row=2,columnspan=1,padx=5,pady=5,sticky="nsew")
+            ok_button.grid(row=2, column=2, columnspan=1, padx=2, sticky='W')
+
         elif radio_button_var == 2:
             people_choices.grid(row=2, column=0, columnspan=2)
             ok_button.config(
                 command=lambda: display(name=people_choices.item(people_choices.selection()[0])['values'][0]))  # ,
-            ok_button.grid(row=3, column=1)
+            ok_button.grid(row=3, column=0, columnspan=1, sticky="E")
             pre_frame = 2
 
         elif radio_button_var == 3:
@@ -59,7 +62,7 @@ def get_frame(window):
             to_entry.grid(row=2, column=2)
             ok_button.config(
                 command=lambda: display(from_date=from_entry.get(), to_date=to_entry.get()))  # , width=10, height=1)
-            ok_button.grid(row=3, column=1)
+            ok_button.grid(row=3, column=2, columnspan=1, sticky='W')
             pre_frame = 3
 
     def clear_frame():
